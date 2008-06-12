@@ -1,0 +1,59 @@
+2008-06-06  Michael Meskes  <meskes@debian.org>
+
+ * started to work on new /sys interface
+ * forked/took over as upstream as I couldn't find Grahame anymore
+
+2005-04-14  Grahame Bowland  <grahame@angrygoats.net>
+
+ * release 0.09
+ * fixes Debian bug ids: #169351, #226306
+ * better handling of "unknown" "charging rate" and "present state" fields
+ * reformatted from 4 space to tab indents
+ * use VERSION from config.h rather than hard-coding it twice.
+
+2005-04-12  Grahame Bowland  <grahame@angrygoats.net>
+
+ * release 0.08
+ * fixes a number of bugs from Debian: #288378, #275564, #229870
+ * now using monotone for version control.
+
+2003-11-10  Grahame Bowland  <grahame@angrygoats.net>
+
+ * release 0.0.7
+ * merge patches from Joey Hess
+ * cleanups, updated email address to grahame@angrygoats.net
+ * grahame@azale.net does *not* contact me any more.
+
+2002-04-07  Grahame Bowland  <grahame@angrygoats.net>
+
+ * release 0.0.5
+ * merge another patch from Joey Hess
+ * (hopefully) fix bug with ac_adaptor on old ACPI
+
+
+2002-04-06  Grahame Bowland  <grahame@angrygoats.net>
+
+ * release 0.0.4
+ * Added support for the -V option.
+ * Merged patch from Joey Hess <joey@debian.org> to add 
+ * compatibility with older versions of the ACPI /proc 
+   layout.
+
+2002-04-03  Grahame Bowland  <grahame@angrygoats.net>
+
+  * release 0.0.3
+  * fix to work with new /proc layout, as of ACPI patch 20020329
+
+2001-??-??  Grahame Bowland  <grahame@angrygoats.net>
+
+  * release 0.0.2
+  * Acer TM517 support; bugfixes by Ulrich Hahn
+  * autoconf/automake for builds now
+  * general bugfixes
+
+2002-??-??  Grahame Bowland  <grahame@angrygoats.net>
+
+  * Initial Release (0.0.1)
+
+ -- Grahame Bowland <grahame@angrygoats.net>
+
