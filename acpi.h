@@ -1,5 +1,3 @@
-
-
 /* provides a simple client program that reads ACPI status from the /proc 
  * filesystem
  *
@@ -28,7 +26,8 @@
 /* remember to update this when making new releases */
 #define ACPI_VERSION_STRING "acpi " VERSION
 
-#define ACPI_PATH   "/proc/acpi"
+#define ACPI_PATH_PROC   "/proc/acpi"
+#define ACPI_PATH_SYS   "/sys/class"
 #define BUF_SIZE    1024
 
 #define TEMP_KELVIN     0
@@ -43,7 +42,7 @@
 #define TRUE            !(FALSE)
 #endif
 
-struct list *find_devices(char *acpi_path, char *device_type, int show_error);
+struct list *find_devices(char *acpi_path, char *device_type, int show_error, int proc_interface);
 
 void free_devices(struct list *devices);
 

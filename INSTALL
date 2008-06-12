@@ -23,6 +23,9 @@ contains results you don't want to keep, you may remove or edit it.
 called `autoconf'.  You only need `configure.in' if you want to change
 it or regenerate `configure' using a newer version of `autoconf'.
 
+   If you are building from CVS you have to run 'autoreconf -i' first to
+generate all files you need for the build process.
+
 The simplest way to compile this package is:
 
   1. `cd' to the directory containing the package's source code and type

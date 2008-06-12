@@ -3,6 +3,7 @@
  * filesystem
  *
  * Copyright (C) 2001  Grahame Bowland <grahame@angrygoats.net>
+ * 	     (C) 2008  Michael Meskes  <meskes@debian.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,6 +27,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <errno.h>
 
 #include "list.h"
 #include "acpi.h"
@@ -44,7 +46,7 @@ static int ignore_directory_entry(struct dirent *de)
 		!strcmp(de->d_name, "..");
 }
 
-static struct field *parse_field(char *buf)
+static struct field *parse_field(char *buf, char *given_attr)
 {
 	struct field *rval;
 	char *p;
@@ -63,20 +65,24 @@ static struct field *parse_field(char *buf)
 	}
 
 	p = buf;
-	while (*(p++)) {
-		if (*p == ':') {
-			strncpy(attr, buf, p - buf);
-			has_attr = 1;
-			break;
+	if (!given_attr) {
+		while (*(p++)) {
+			if (*p == ':') {
+				strncpy(attr, buf, p - buf);
+				has_attr = 1;
+				break;
+			}
 		}
-	}
-	if (!has_attr) {
-		free(attr); free(value); free(rval);
-		return NULL;
-	}
-	p++;
-	while (*(p++)) {
-		if (*p != ' ') { break; }
+		if (!has_attr) {
+			free(attr); free(value); free(rval);
+			return NULL;
+		}
+		if (*p == ' ') p++;
+		while (*(p++)) {
+			if (*p != ' ') { break; }
+		}
+	} else {
+		strncpy(attr, given_attr, BUF_SIZE);
 	}
 	strncpy(value, p, BUF_SIZE);
 	rval->attr = attr;
@@ -84,7 +90,7 @@ static struct field *parse_field(char *buf)
 	return rval;
 }
 
-static struct list *parse_info_file(struct list *l, char *filename)
+static struct list *parse_info_file(struct list *l, char *filename, char *given_attr)
 {
 	FILE *fd;
 	char buf[BUF_SIZE];
@@ -95,7 +101,7 @@ static struct list *parse_info_file(struct list *l, char *filename)
 	}
 	while (fgets(buf, BUF_SIZE, fd)) {
 		struct field *f;
-		f = parse_field(buf);
+		f = parse_field(buf, given_attr);
 		if (!f) { continue; }
 		l = list_append(l, f);
 	}
@@ -103,19 +109,50 @@ static struct list *parse_info_file(struct list *l, char *filename)
 	return l;
 }
 
-static struct list *get_device_info(char *device_name)
+static struct list *get_sys_info(char *device_name, char *acpi_path, char *device_type)
+{
+	struct list *rval = NULL;
+
+	if (!strncmp(device_name, "cooling_device", strlen("cooling_device")))
+		return NULL;
+	if (chdir(device_name) < 0)
+		return NULL;
+
+	rval = parse_info_file(rval, "current_now", "current_now");
+	rval = parse_info_file(rval, "charge_now", "charge_now");
+	rval = parse_info_file(rval, "energy_now", "charge_now");
+	rval = parse_info_file(rval, "charge_full", "charge_full");
+	rval = parse_info_file(rval, "energy_full", "charge_full");
+	rval = parse_info_file(rval, "charge_full_design", "charge_full_design");
+	rval = parse_info_file(rval, "energy_full_design", "charge_full_design");
+	rval = parse_info_file(rval, "online", "online");
+	rval = parse_info_file(rval, "status", "charging state");
+	rval = parse_info_file(rval, "type", "type");
+	rval = parse_info_file(rval, "trip_point_0_type", "sys_trip_type");
+	rval = parse_info_file(rval, "trip_point_0_temp", "sys_trip_temp");
+	rval = parse_info_file(rval, "temp", "sys_temp");
+
+	/* we cannot do chdir("..") here because some dirs are just symlinks */
+	if (chdir(acpi_path) < 0)
+		return NULL;
+	if (chdir(device_type) < 0) 
+		return NULL;
+	return rval;
+}
+
+static struct list *get_proc_info(char *device_name)
 {
 	struct list *rval = NULL;
 
 	if (chdir(device_name) < 0) {
 		return NULL;
 	}
-	rval = parse_info_file(rval, "state");
-	rval = parse_info_file(rval, "status");
-	rval = parse_info_file(rval, "info");
-	rval = parse_info_file(rval, "temperature");
-	rval = parse_info_file(rval, "cooling_mode");
-	chdir("..");
+	rval = parse_info_file(rval, "state", NULL);
+	rval = parse_info_file(rval, "status", NULL);
+	rval = parse_info_file(rval, "info", NULL);
+	rval = parse_info_file(rval, "temperature", NULL);
+	rval = parse_info_file(rval, "cooling_mode", NULL);
+	chdir ("..");
 	return rval;
 }
 
@@ -140,7 +177,7 @@ void free_devices(struct list *devices)
 	list_free(devices);
 }
 
-struct list *find_devices(char *acpi_path, char *device_type, int showerr)
+struct list *find_devices(char *acpi_path, char *device_type, int showerr, int proc_interface)
 {
 	DIR *d;
 	struct dirent *de;
@@ -167,8 +204,14 @@ struct list *find_devices(char *acpi_path, char *device_type, int showerr)
 		if (ignore_directory_entry(de)) {
 			continue;
 		}
-		device_info = get_device_info(de->d_name);
-		rval = list_append(rval, device_info);
+
+		if (proc_interface)
+			device_info = get_proc_info(de->d_name);
+		else 
+			device_info = get_sys_info(de->d_name, acpi_path, device_type);
+
+		if (device_info)
+			rval = list_append(rval, device_info);
 	}
 	closedir(d);
 	return rval;
@@ -190,6 +233,7 @@ void print_ac_adapter_information(struct list *ac_adapters, int show_empty_slots
 
 	while (adapter) {
 		char *state = NULL;
+		int type_ac = 0;
 
 		fields = adapter->data;
 		while (fields) {
@@ -197,16 +241,24 @@ void print_ac_adapter_information(struct list *ac_adapters, int show_empty_slots
 			if (!strcmp(value->attr, "state") || !strcmp(value->attr, "Status")) {
 				state = value->value;
 			}
+			else if (!strcmp(value->attr, "online")) {
+				state = get_unit_value(value->value) ? "on-line" : "off-line";
+			} else if (!strcmp(value->attr, "type")) {
+				type_ac = strcasecmp(value->value, "mains");
+			}
+
 			fields = list_next(fields);
 		}
-		if (!state) {
-			if (show_empty_slots) {
-				printf("%12s %d: slot empty\n", AC_ADAPTER_DESC, adapter_num);
+		if (type_ac == 0) { /* or else this is a battery */
+			if (!state) {
+				if (show_empty_slots) {
+					printf("%12s %d: slot empty\n", AC_ADAPTER_DESC, adapter_num);
+				}
+			} else {
+				printf("%12s %d: %s\n", AC_ADAPTER_DESC, adapter_num, state);
 			}
-		} else {
-			printf("%12s %d: %s\n", AC_ADAPTER_DESC, adapter_num, state);
+			adapter_num++;
 		}
-		adapter_num++;
 		adapter = list_next(adapter);
 	}
 }
@@ -219,26 +271,33 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 	int sensor_num = 1;
 
 	while (sensor) {
-		float temperature = -1;
+		float temperature = -1, trip_temp = -1;
 		char *state = NULL, *scale;
 		double real_temp;
 		
 		fields = sensor->data;
 		while (fields) {
 			value = fields->data;
-			if (!strcmp(value->attr, "state")) {
+			if (!strcmp(value->attr, "state") ||
+			    !strcmp(value->attr, "sys_trip_type")) {
 				state = value->value;
 			} else if (!strcmp(value->attr, "temperature")) {
 				temperature = get_unit_value(value->value);
-		if (strstr(value->value, "dK")) {
-			temperature = (temperature / 10) - ABSOLUTE_ZERO;
-		}
+				if (strstr(value->value, "dK")) {
+					temperature = (temperature / 10) - ABSOLUTE_ZERO;
+				}
+			} else if (!strcmp(value->attr, "sys_temp")) {
+				temperature = get_unit_value(value->value) / 1000.0;
+			} else if (!strcmp(value->attr, "sys_trip_temp")) {
+				trip_temp = get_unit_value(value->value) / 1000.0;
 			}
 			fields = list_next(fields);
 		}
+		if (temperature < trip_temp) 
+			state = "ok";
 		if (temperature < 0 || !state) {
 			if (show_empty_slots) {
-				printf("%12s %d: slot empty\n", THERMAL_DESC, sensor_num);
+				printf("%12s %d: slot empty\n", THERMAL_DESC, sensor_num - 1);
 			}
 		} else {
 			real_temp = (double)temperature;
@@ -256,7 +315,7 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 					scale = "kelvin";
 					break;
 			}
-			printf("%12s %d: %s, %.1f %s\n", THERMAL_DESC, sensor_num, state, real_temp, scale);
+			printf("%12s %d: %s, %.1f %s\n", THERMAL_DESC, sensor_num - 1, state, real_temp, scale);
 		}
 		sensor_num++;
 		sensor = list_next(sensor);
@@ -274,80 +333,89 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 		int remaining_capacity = -1;
 		int present_rate = -1;
 		int design_capacity = -1;
+		int real_capacity = -1;
 		int hours, minutes, seconds;
-		int found_fields = 0;
-		double pct = 0;
 		int percentage;
 		char *state = NULL, *poststr;
+		int type_battery = 0;
 
 		fields = battery->data;
 		while (fields) {
 			value = fields->data;
 			if (!strcasecmp(value->attr, "remaining capacity")) {
 				remaining_capacity = get_unit_value(value->value);
-				found_fields++;
-			} else if (!strcasecmp(value->attr, "present rate")) {
+			} else if (!strcmp(value->attr, "charge_now")) {
+				remaining_capacity = get_unit_value(value->value)/1000;
+			} else if (!strcasecmp(value->attr, "present_rate")) {
 				present_rate = get_unit_value(value->value);
-				found_fields++;
+			} else if (!strcmp(value->attr, "current_now")) {
+				present_rate = abs(get_unit_value(value->value))/1000;
 			} else if (!strcasecmp(value->attr, "last full capacity")) {
 				design_capacity = get_unit_value(value->value);
-				found_fields++;
+			} else if (!strcmp(value->attr, "charge_full")) {
+				design_capacity = get_unit_value(value->value)/1000;
+			} else if (!strcmp(value->attr, "charge_full_design")) {
+				real_capacity = get_unit_value(value->value)/1000;
+			} else if (!strcmp(value->attr, "type")) {
+				type_battery = strcasecmp(value->value, "battery");
 			} else if (!strcmp(value->attr, "charging state") ||
 				   !strcmp(value->attr, "State")) {
 				state = value->value;
-				found_fields++;
-			}
-			/* have we found every field we need? */
-			if (found_fields >= 4) {
-				break;
 			}
 			fields = list_next(fields);
 		}
-		if (remaining_capacity < 0 || design_capacity < 0 || !state) {
-			if (show_empty_slots) {
-				printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num);
-			}
-		} else {
-			if (design_capacity < MIN_CAPACITY) {
-				pct = 0;
+		if (type_battery == 0) { /* or else this is the ac_adapter */
+			if (remaining_capacity < 0 || design_capacity < 0 || !state) {
+				if (show_empty_slots) {
+					printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num);
+				}
 			} else {
-				pct = (double)remaining_capacity / design_capacity;
-			}
-			percentage = pct * 100;
-			if (percentage > 100)
-				percentage = 100;
-			printf("%12s %d: %s, %d%%", BATTERY_DESC, battery_num, state, percentage);
-			if (present_rate == -1) {
-				poststr = "rate information unavailable.";
-				seconds = -1;
-			} else if (!strcmp(state, "charging")) {
-				if (present_rate > MIN_PRESENT_RATE) {
-					seconds = 3600 * (double)(design_capacity - remaining_capacity) / present_rate;
-					poststr = " until charged";
+				if (design_capacity < MIN_CAPACITY) {
+					percentage = 0;
 				} else {
-					poststr = "charging at zero rate - will never fully charge.";
+					percentage = remaining_capacity * 100 / design_capacity;
+				}
+				if (percentage > 100)
+					percentage = 100;
+				printf("%12s %d: %s, %d%%", BATTERY_DESC, battery_num, state, percentage);
+				if (present_rate == -1) {
+					poststr = "rate information unavailable.";
+					seconds = -1;
+				} else if (!strcasecmp(state, "charging")) {
+					if (present_rate > MIN_PRESENT_RATE) {
+						seconds = 60 * (design_capacity - remaining_capacity) / present_rate;
+						poststr = " until charged";
+					} else {
+						poststr = "charging at zero rate - will never fully charge.";
+						seconds = -1;
+					}
+				} else if (!strcasecmp(state, "discharging")) {
+					if (present_rate > MIN_PRESENT_RATE) {
+						seconds = 60 * remaining_capacity / present_rate;
+						poststr = " remaining";
+					} else {
+						poststr = "discharging at zero rate - will never fully discharge.";
+						seconds = -1;
+					}
+				} else {
+					poststr = NULL;
 					seconds = -1;
 				}
-			} else if (!strcmp(state, "discharging")) {
-				seconds = 3600 * (float)remaining_capacity / present_rate;
-				poststr = " remaining";
-			} else {
-				poststr = NULL;
-				seconds = -1;
+
+				if (seconds > 0) {
+					hours = seconds / 3600;
+					seconds -= 3600 * hours;
+					minutes = seconds / 60;
+					seconds -= 60 * minutes;
+					printf(", %02d:%02d:%02d%s", hours, minutes, seconds, poststr);
+				} else if ((seconds < 0) && (poststr != NULL)) {
+					printf(", %s", poststr);
+				}
+				printf("\n");
 			}
-			if (seconds > 0) {
-				hours = seconds / 3600;
-				seconds -= 3600 * hours;
-				minutes = seconds / 60;
-				seconds -= 60 * minutes;
-				printf(", %02d:%02d:%02d%s", hours, minutes, seconds, poststr);
-			} else if ((seconds < 0) && (poststr != NULL)) {
-				printf(", %s", poststr);
-			}
-			printf("\n");
+			battery_num++;
 		}
 		battery = list_next(battery);
-		battery_num++;
 	}
 }
 

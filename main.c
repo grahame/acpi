@@ -26,30 +26,36 @@
 #include <getopt.h>
 #include "acpi.h"
 
-static void do_show_batteries(char *acpi_path, int show_empty_slots)/*{{{*/
+static void do_show_batteries(char *acpi_path, int show_empty_slots, int proc_interface)/*{{{*/
 {
 	struct list *batteries;
 
-	batteries = find_devices(acpi_path, "battery", TRUE);
+	if (proc_interface)
+		batteries = find_devices(acpi_path, "battery", TRUE, proc_interface);
+	else
+		batteries = find_devices(acpi_path, "power_supply", TRUE, proc_interface);
 	print_battery_information(batteries, show_empty_slots);
 	free_devices(batteries);
 }
 
-static void do_show_thermal(char *acpi_path, int show_empty_slots, int temperature_units) {/*{{{*/
+static void do_show_thermal(char *acpi_path, int show_empty_slots, int temperature_units, int proc_interface) {/*{{{*/
 	struct list *thermal;
-	thermal = find_devices(acpi_path, "thermal_zone", FALSE);
+	thermal = find_devices(acpi_path, "thermal_zone", FALSE, proc_interface);
 	if (!thermal) {
 		/* old acpi directory structure */
-		thermal = find_devices(acpi_path, "thermal", TRUE); 
+		thermal = find_devices(acpi_path, "thermal", TRUE, proc_interface); 
 	}
 	print_thermal_information(thermal, show_empty_slots, temperature_units);
 	free_devices(thermal);
 }
 
-static void do_show_ac_adapter(char *acpi_path, int show_empty_slots)/*{{{*/
+static void do_show_ac_adapter(char *acpi_path, int show_empty_slots, int proc_interface)/*{{{*/
 {
 	struct list *ac_adapter;
-	ac_adapter = find_devices(acpi_path, "ac_adapter", TRUE);
+	if (proc_interface)
+		ac_adapter = find_devices(acpi_path, "ac_adapter", TRUE, proc_interface);
+	else
+		ac_adapter = find_devices(acpi_path, "power_supply", TRUE, proc_interface);
 	print_ac_adapter_information(ac_adapter, show_empty_slots);
 	free_devices(ac_adapter);
 }
@@ -84,7 +90,8 @@ static int usage(char *argv[])/*{{{*/
 "  -c, --celsius				use celsius as the temperature unit\n"
 "  -f, --fahrenheit			 use fahrenheit as the temperature unit\n"
 "  -k, --kelvin				 use kelvin as the temperature unit\n"
-"  -d, --directory <dir>		path to ACPI info (/proc/acpi)\n"
+"  -d, --directory <dir>		path to ACPI info (/sys/class resp. /proc/acpi)\n"
+"  -p, --proc				use old proc interface instead of new sys interface\n"
 "  -h, --help				   display this help and exit\n"
 "  -v, --version				output version information and exit\n"
 "\n"
@@ -115,6 +122,7 @@ static struct option long_options[] = {/*{{{*/
 	{ "kelvin", 0, 0, 'k' }, 
 	{ "directory", 1, 0, 'd' },
 	{ "everything", 0, 0, 'V' }, 
+	{ "proc", 0, 0, 'p' }, 
 	{ 0, 0, 0, 0 }, 
 };
 
@@ -125,16 +133,17 @@ int main(int argc, char *argv[])/*{{{*/
 	int show_thermal = 0;
 	int show_ac_adapter = 0;
 	int show_empty_slots = 0;
+	int proc_interface = FALSE;
 	int temperature_units = TEMP_CELSIUS;
 	int ch, option_index;
-	char *acpi_path = strdup(ACPI_PATH);
+	char *acpi_path = strdup(ACPI_PATH_SYS);
 
 	if (!acpi_path) {
 		fprintf(stderr, "Out of memory in main()\n");
 		return -1;
 	}
 
-	while ((ch = getopt_long(argc, argv, "VbBtTaAsShvfkcd:", long_options, &option_index)) != -1) {
+	while ((ch = getopt_long(argc, argv, "pVbBtTaAsShvfkcd:", long_options, &option_index)) != -1) {
 		switch (ch) {
 			case 'V':
 				show_everything = 1;
@@ -175,6 +184,11 @@ int main(int argc, char *argv[])/*{{{*/
 			case 'c':
 				temperature_units = TEMP_CELSIUS;
 				break;
+			case 'p':
+				proc_interface = TRUE;
+				free(acpi_path);
+				acpi_path = strdup(ACPI_PATH_PROC);
+				break;
 			case 'd':
 				free(acpi_path);
 				acpi_path = strdup(optarg);
@@ -190,13 +204,13 @@ int main(int argc, char *argv[])/*{{{*/
 	}
 
 	if (show_everything || show_batteries) {
-		do_show_batteries(acpi_path, show_empty_slots);
+		do_show_batteries(acpi_path, show_empty_slots, proc_interface);
 	}
 	if (show_everything || show_thermal) {
-		do_show_thermal(acpi_path, show_empty_slots, temperature_units);
+		do_show_thermal(acpi_path, show_empty_slots, temperature_units, proc_interface);
 	}
 	if (show_everything || show_ac_adapter) {
-		do_show_ac_adapter(acpi_path, show_empty_slots);
+		do_show_ac_adapter(acpi_path, show_empty_slots, proc_interface);
 	}
 	return 0;
 }
