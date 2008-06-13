@@ -1,4 +1,3 @@
-
 /* provides a simple client program that reads ACPI status from the /proc 
  * filesystem
  *
@@ -36,6 +35,7 @@
 #define BATTERY_DESC	"Battery"
 #define AC_ADAPTER_DESC "AC Adapter"
 #define THERMAL_DESC	"Thermal"
+#define COOLING_DESC	"Cooling"
 
 #define MIN_PRESENT_RATE 0.01
 #define MIN_CAPACITY	 0.01
@@ -113,8 +113,6 @@ static struct list *get_sys_info(char *device_name, char *acpi_path, char *devic
 {
 	struct list *rval = NULL;
 
-	if (!strncmp(device_name, "cooling_device", strlen("cooling_device")))
-		return NULL;
 	if (chdir(device_name) < 0)
 		return NULL;
 
@@ -131,6 +129,8 @@ static struct list *get_sys_info(char *device_name, char *acpi_path, char *devic
 	rval = parse_info_file(rval, "trip_point_0_type", "sys_trip_type");
 	rval = parse_info_file(rval, "trip_point_0_temp", "sys_trip_temp");
 	rval = parse_info_file(rval, "temp", "sys_temp");
+	rval = parse_info_file(rval, "cur_state", "cur_state");
+	rval = parse_info_file(rval, "max_state", "max_state");
 
 	/* we cannot do chdir("..") here because some dirs are just symlinks */
 	if (chdir(acpi_path) < 0)
@@ -224,104 +224,6 @@ static unsigned int get_unit_value(char *value)
 	return n;
 }
 
-void print_ac_adapter_information(struct list *ac_adapters, int show_empty_slots)
-{
-	struct list *adapter = ac_adapters;
-	struct list *fields;
-	struct field *value;
-	int adapter_num = 1;
-
-	while (adapter) {
-		char *state = NULL;
-		int type_ac = 0;
-
-		fields = adapter->data;
-		while (fields) {
-			value = fields->data;
-			if (!strcmp(value->attr, "state") || !strcmp(value->attr, "Status")) {
-				state = value->value;
-			}
-			else if (!strcmp(value->attr, "online")) {
-				state = get_unit_value(value->value) ? "on-line" : "off-line";
-			} else if (!strcmp(value->attr, "type")) {
-				type_ac = strcasecmp(value->value, "mains");
-			}
-
-			fields = list_next(fields);
-		}
-		if (type_ac == 0) { /* or else this is a battery */
-			if (!state) {
-				if (show_empty_slots) {
-					printf("%12s %d: slot empty\n", AC_ADAPTER_DESC, adapter_num);
-				}
-			} else {
-				printf("%12s %d: %s\n", AC_ADAPTER_DESC, adapter_num, state);
-			}
-			adapter_num++;
-		}
-		adapter = list_next(adapter);
-	}
-}
-
-void print_thermal_information(struct list *thermal, int show_empty_slots, int temp_units)
-{
-	struct list *sensor = thermal;
-	struct list *fields;
-	struct field *value;
-	int sensor_num = 1;
-
-	while (sensor) {
-		float temperature = -1, trip_temp = -1;
-		char *state = NULL, *scale;
-		double real_temp;
-		
-		fields = sensor->data;
-		while (fields) {
-			value = fields->data;
-			if (!strcmp(value->attr, "state") ||
-			    !strcmp(value->attr, "sys_trip_type")) {
-				state = value->value;
-			} else if (!strcmp(value->attr, "temperature")) {
-				temperature = get_unit_value(value->value);
-				if (strstr(value->value, "dK")) {
-					temperature = (temperature / 10) - ABSOLUTE_ZERO;
-				}
-			} else if (!strcmp(value->attr, "sys_temp")) {
-				temperature = get_unit_value(value->value) / 1000.0;
-			} else if (!strcmp(value->attr, "sys_trip_temp")) {
-				trip_temp = get_unit_value(value->value) / 1000.0;
-			}
-			fields = list_next(fields);
-		}
-		if (temperature < trip_temp) 
-			state = "ok";
-		if (temperature < 0 || !state) {
-			if (show_empty_slots) {
-				printf("%12s %d: slot empty\n", THERMAL_DESC, sensor_num - 1);
-			}
-		} else {
-			real_temp = (double)temperature;
-			switch (temp_units) {
-				case TEMP_CELSIUS:
-					scale = "degrees C";
-					break;
-				case TEMP_FAHRENHEIT:
-					real_temp = (real_temp * 1.8) + 32;
-					scale = "degrees F";
-					break;
-				case TEMP_KELVIN:
-				default:
-					real_temp += ABSOLUTE_ZERO;
-					scale = "kelvin";
-					break;
-			}
-			printf("%12s %d: %s, %.1f %s\n", THERMAL_DESC, sensor_num - 1, state, real_temp, scale);
-		}
-		sensor_num++;
-		sensor = list_next(sensor);
-	} 
-}
-
 void print_battery_information(struct list *batteries, int show_empty_slots)
 {
 	struct list *battery = batteries;
@@ -337,7 +239,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 		int hours, minutes, seconds;
 		int percentage;
 		char *state = NULL, *poststr;
-		int type_battery = 0;
+		int type_battery = TRUE;
 
 		fields = battery->data;
 		while (fields) {
@@ -357,17 +259,17 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 			} else if (!strcmp(value->attr, "charge_full_design")) {
 				real_capacity = get_unit_value(value->value)/1000;
 			} else if (!strcmp(value->attr, "type")) {
-				type_battery = strcasecmp(value->value, "battery");
+				type_battery = (strcasecmp(value->value, "battery") == 0);
 			} else if (!strcmp(value->attr, "charging state") ||
 				   !strcmp(value->attr, "State")) {
 				state = value->value;
 			}
 			fields = list_next(fields);
 		}
-		if (type_battery == 0) { /* or else this is the ac_adapter */
+		if (type_battery) { /* or else this is the ac_adapter */
 			if (remaining_capacity < 0 || design_capacity < 0 || !state) {
 				if (show_empty_slots) {
-					printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num);
+					printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
 				}
 			} else {
 				if (design_capacity < MIN_CAPACITY) {
@@ -377,7 +279,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 				}
 				if (percentage > 100)
 					percentage = 100;
-				printf("%12s %d: %s, %d%%", BATTERY_DESC, battery_num, state, percentage);
+				printf("%12s %d: %s, %d%%", BATTERY_DESC, battery_num - 1, state, percentage);
 				if (present_rate == -1) {
 					poststr = "rate information unavailable.";
 					seconds = -1;
@@ -419,5 +321,152 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 	}
 }
 
+void print_ac_adapter_information(struct list *ac_adapters, int show_empty_slots)
+{
+	struct list *adapter = ac_adapters;
+	struct list *fields;
+	struct field *value;
+	int adapter_num = 1;
 
+	while (adapter) {
+		char *state = NULL;
+		int type_ac = TRUE;
 
+		fields = adapter->data;
+		while (fields) {
+			value = fields->data;
+			if (!strcmp(value->attr, "state") || !strcmp(value->attr, "Status")) {
+				state = value->value;
+			}
+			else if (!strcmp(value->attr, "online")) {
+				state = get_unit_value(value->value) ? "on-line" : "off-line";
+			} else if (!strcmp(value->attr, "type")) {
+				type_ac = (strcasecmp(value->value, "mains") == 0);
+			}
+
+			fields = list_next(fields);
+		}
+		if (type_ac) { /* or else this is a battery */
+			if (!state) {
+				if (show_empty_slots) {
+					printf("%12s %d: slot empty\n", AC_ADAPTER_DESC, adapter_num - 1);
+				}
+			} else {
+				printf("%12s %d: %s\n", AC_ADAPTER_DESC, adapter_num - 1, state);
+			}
+			adapter_num++;
+		}
+		adapter = list_next(adapter);
+	}
+}
+
+void print_thermal_information(struct list *thermal, int show_empty_slots, int temp_units)
+{
+	struct list *sensor = thermal;
+	struct list *fields;
+	struct field *value;
+	int sensor_num = 1;
+	int type_zone = TRUE;
+
+	while (sensor) {
+		float temperature = -1, trip_temp = -1;
+		char *state = NULL, *scale;
+		double real_temp;
+		
+		fields = sensor->data;
+		while (fields) {
+			value = fields->data;
+			if (!strcmp(value->attr, "state") ||
+			    !strcmp(value->attr, "sys_trip_type")) {
+				state = value->value;
+			} else if (!strcmp(value->attr, "type")) {
+				type_zone = (strstr(value->value, "thermal zone") != NULL);
+			} else if (!strcmp(value->attr, "temperature")) {
+				temperature = get_unit_value(value->value);
+				if (strstr(value->value, "dK")) {
+					temperature = (temperature / 10) - ABSOLUTE_ZERO;
+				}
+			} else if (!strcmp(value->attr, "sys_temp")) {
+				temperature = get_unit_value(value->value) / 1000.0;
+			} else if (!strcmp(value->attr, "sys_trip_temp")) {
+				trip_temp = get_unit_value(value->value) / 1000.0;
+			}
+			fields = list_next(fields);
+		}
+		if (type_zone) { /* or else this is a cooling device */
+			if (temperature < trip_temp) 
+				state = "ok";
+			if (temperature < 0 || !state) {
+				if (show_empty_slots) {
+					printf("%12s %d: slot empty\n", THERMAL_DESC, sensor_num - 1);
+				}
+			} else {
+				real_temp = (double)temperature;
+				switch (temp_units) {
+					case TEMP_CELSIUS:
+						scale = "degrees C";
+						break;
+					case TEMP_FAHRENHEIT:
+						real_temp = (real_temp * 1.8) + 32;
+						scale = "degrees F";
+						break;
+					case TEMP_KELVIN:
+					default:
+						real_temp += ABSOLUTE_ZERO;
+						scale = "kelvin";
+						break;
+				}
+				printf("%12s %d: %s, %.1f %s\n", THERMAL_DESC, sensor_num - 1, state, real_temp, scale);
+			}
+			sensor_num++;
+		}
+		sensor = list_next(sensor);
+	} 
+}
+
+void print_cooling_information(struct list *cooling, int show_empty_slots)
+{
+	struct list *sensor = cooling;
+	struct list *fields;
+	struct field *value;
+	int sensor_num = 1;
+
+	while (sensor) {
+		char *state = NULL, *type = NULL;
+		int cur_state = -1, max_state = -1;
+		int type_cooling = TRUE;
+
+		fields = sensor->data;
+		while (fields) {
+			value = fields->data;
+			if (!strcmp(value->attr, "status")) {
+				state = value->value;
+			} else if (!strcmp(value->attr, "type")) {
+			        type = value->value;
+				type_cooling = (strstr(type, "thermal zone") == NULL);
+			} else if (!strcmp(value->attr, "cur_state")) {
+			        cur_state = get_unit_value(value->value);
+			} else if (!strcmp(value->attr, "max_state")) {
+			        max_state = get_unit_value(value->value);
+			}
+			fields = list_next(fields);
+		}
+		if (type_cooling) { /* or else this is a thermal zone */
+			if (!state && !type) {
+				if (show_empty_slots) {
+					printf("%12s %d: slot empty\n", COOLING_DESC, sensor_num - 1);
+				}
+			} else if (state) {
+				printf("%12s %d: %s\n", COOLING_DESC, sensor_num - 1, state);
+			} else if (cur_state < 0 || max_state < 0) {
+				printf("%12s %d: %s no state information available\n", COOLING_DESC, sensor_num - 1, type);
+			} else {
+				printf("%12s %d: %s %d of %d\n", COOLING_DESC, sensor_num - 1, type, cur_state, max_state);
+			}
+
+			sensor_num++;
+		}
+
+		sensor = list_next(sensor);
+	}
+}

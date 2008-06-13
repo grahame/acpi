@@ -2,6 +2,7 @@
  * filesystem
  *
  * Copyright (C) 2001  Grahame Bowland <grahame@angrygoats.net>
+ *                     Michael Meskes <meskes@debian.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -51,6 +52,8 @@ void print_battery_information(struct list *batteries, int show_empty_slots);
 void print_ac_adapter_information(struct list *batteries, int show_empty_slots);
 
 void print_thermal_information(struct list *batteries, int show_empty_slots, int temp_units);
+
+void print_cooling_information(struct list *batteries, int show_empty_slots);
 
 #endif
 

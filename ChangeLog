@@ -1,6 +1,10 @@
+2008-06-13  Michael Meskes  <meskes@debian.org>
+
+ * added output for cooling devices
+
 2008-06-06  Michael Meskes  <meskes@debian.org>
 
- * started to work on new /sys interface
+ * added new /sys interface
  * forked/took over as upstream as I couldn't find Grahame anymore
 
 2005-04-14  Grahame Bowland  <grahame@angrygoats.net>

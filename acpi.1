@@ -14,26 +14,28 @@ or thermal information.
 show battery information
 .IP "\fB-B | --without-battery\fP " 10
 suppress battery information
-.IP "\fB-t |  --thermal\fP " 10
-show thermal information
-.IP "\fB-T | --without-thermal\fP " 10
-suppress thermal information
 .IP "\fB-a | --ac-adapter\fP " 10
 show ac adapter information
 .IP "\fB-A | --without-ac-adapter\fP " 10
 suppress ac-adapter information
+.IP "\fB-t |  --thermal\fP " 10
+show thermal information
+.IP "\fB-T | --without-thermal\fP " 10
+suppress thermal information
+.IP "\fB-c | --cooling\fP " 10
+show cooling device information
+.IP "\fB-C | --without-cooling\fP " 10
+suppress cooling device information
 .IP "\fB-V | --everything\fP " 10
 show every device, overrides above options
 .IP "\fB-s | --show-empty\fP " 10
 show non-operational devices
 .IP "\fB-S | --hide-empty\fP " 10
 hide non-operational devices
-.IP "\fB-c | --celcius\fP " 10
-use celcius as the temperature unit (default)
 .IP "\fB-f | --fahrenheit\fP " 10
-use fahrenheit as the temperature unit
+use fahrenheit as the temperature unit instead of default celsius
 .IP "\fB-k | --kelvin\fP " 10
-use kelvin as the temperature unit
+use kelvin as the temperature unit instead of default celsius
 .IP "\fB-p | --proc\fP " 10
 use the old /proc interface, default is the new /sys one
 .IP "\fB-d | --directory <dir>\fP " 10
@@ -45,6 +47,7 @@ output version information and exit
 
 .SH "AUTHOR" 
 .PP 
-The original versio of this manual page was written by Paul Telford
-<pxt@debian.org> for the \fBDebian\fP system. Permission is granted to copy,
-distribute and/or modify this document under the terms of the GNU GPL.
+The original version of this manual page was written by Paul Telford
+<pxt@debian.org> for the \fBDebian\fP system. Newer additions were done my
+Michael Meskes <meskes@debian.org>. Permission is granted to copy, distribute
+and/or modify this document under the terms of the GNU GPL.
