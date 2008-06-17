@@ -1,5 +1,6 @@
 2008-06-17  Michael Meskes  <meskes@debian.org>
 
+ * release 1.1
  * just another possible type entry
  * some more code cleanup
  * removed support for old /proc file structure, only the last version of
@@ -7,6 +8,7 @@
 
 2008-06-13  Michael Meskes  <meskes@debian.org>
 
+ * release 1.0
  * added output for cooling devices
 
 2008-06-06  Michael Meskes  <meskes@debian.org>
