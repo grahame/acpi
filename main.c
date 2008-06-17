@@ -25,14 +25,18 @@
 #include <getopt.h>
 #include "acpi.h"
 
+struct device device[4] = {
+			{ BATTERY, "battery", "power_supply", "BAT" },
+			{ AC_ADAPTER, "ac_adapter", "power_supply", "AC" },
+			{ THERMAL_ZONE, "thermal_zone", "thermal", "thermal_zone" },
+			{ COOLING_DEV, "fan", "thermal", "cooling_device" }
+			  };
+
 static void do_show_batteries(char *acpi_path, int show_empty_slots, int proc_interface)
 {
 	struct list *batteries;
 
-	if (proc_interface)
-		batteries = find_devices(acpi_path, "battery", TRUE, proc_interface);
-	else
-		batteries = find_devices(acpi_path, "power_supply", TRUE, proc_interface);
+	batteries = find_devices(acpi_path, BATTERY, proc_interface);
 	print_battery_information(batteries, show_empty_slots);
 	free_devices(batteries);
 }
@@ -40,31 +44,24 @@ static void do_show_batteries(char *acpi_path, int show_empty_slots, int proc_in
 static void do_show_ac_adapter(char *acpi_path, int show_empty_slots, int proc_interface)
 {
 	struct list *ac_adapter;
-	if (proc_interface)
-		ac_adapter = find_devices(acpi_path, "ac_adapter", TRUE, proc_interface);
-	else
-		ac_adapter = find_devices(acpi_path, "power_supply", TRUE, proc_interface);
+
+	ac_adapter = find_devices(acpi_path, AC_ADAPTER, proc_interface);
 	print_ac_adapter_information(ac_adapter, show_empty_slots);
 	free_devices(ac_adapter);
 }
 
 static void do_show_thermal(char *acpi_path, int show_empty_slots, int temperature_units, int proc_interface) {
 	struct list *thermal;
-	thermal = find_devices(acpi_path, "thermal_zone", FALSE, proc_interface);
-	if (!thermal) {
-		/* old acpi directory structure */
-		thermal = find_devices(acpi_path, "thermal", TRUE, proc_interface); 
-	}
+
+	thermal = find_devices(acpi_path, THERMAL_ZONE, proc_interface);
 	print_thermal_information(thermal, show_empty_slots, temperature_units);
 	free_devices(thermal);
 }
 
 static void do_show_cooling(char *acpi_path, int show_empty_slots, int proc_interface) {
 	struct list *cooling;
-	if (proc_interface)
-		cooling = find_devices(acpi_path, "fan", TRUE, proc_interface);
-	else
-		cooling = find_devices(acpi_path, "thermal", TRUE, proc_interface);
+
+	cooling = find_devices(acpi_path, COOLING_DEV, proc_interface);
 	print_cooling_information(cooling, show_empty_slots);
 	free_devices(cooling);
 }

@@ -43,7 +43,20 @@
 #define TRUE            !(FALSE)
 #endif
 
-struct list *find_devices(char *acpi_path, char *device_type, int show_error, int proc_interface);
+#define BATTERY 0
+#define AC_ADAPTER 1
+#define THERMAL_ZONE 2
+#define COOLING_DEV 3
+
+extern struct device
+{
+	int type;
+	char *proc;
+	char *sys;
+	char *sys_dev;
+} device[4];
+
+struct list *find_devices(char *acpi_path, int device_nr, int proc_interface);
 
 void free_devices(struct list *devices);
 

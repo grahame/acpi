@@ -109,50 +109,57 @@ static struct list *parse_info_file(struct list *l, char *filename, char *given_
 	return l;
 }
 
-static struct list *get_sys_info(char *device_name, char *acpi_path, char *device_type)
+struct file_list
+{
+	char *file;
+	char *attr;
+}; 
+
+static struct file_list	sys_list[] =
+		{
+			{ "current_now", "current_now"},
+			{ "charge_now", "charge_now"},
+			{ "energy_now", "charge_now"},
+			{ "charge_full", "charge_full"},
+			{ "energy_full", "charge_full"},
+			{ "charge_full_design", "charge_full_design"},
+			{ "energy_full_design", "charge_full_design"},
+			{ "online", "online"},
+			{ "status", "charging state"},
+			{ "type", "type"},
+			{ "trip_point_0_type", "sys_trip_type"},
+			{ "trip_point_0_temp", "sys_trip_temp"},
+			{ "temp", "sys_temp"},
+			{ "cur_state", "cur_state"},
+			{ "max_state", "max_state"}
+		};
+
+static struct file_list	proc_list[] =
+		{
+			{ "state", NULL},
+			{ "status", NULL},
+			{ "info", NULL},
+			{ "temperature", NULL},
+			{ "cooling_mode", NULL},
+		};
+
+static struct list *get_info(char *device_name, int proc_interface)
 {
 	struct list *rval = NULL;
+	struct file_list *list = proc_interface ? proc_list : sys_list;
+	int i, n = (proc_interface ? sizeof(proc_list) : sizeof(sys_list))/sizeof(struct file_list);
+	char *filename = malloc(strlen(device_name) + strlen("/energy_full_design"));
 
-	if (chdir(device_name) < 0)
-		return NULL;
-
-	rval = parse_info_file(rval, "current_now", "current_now");
-	rval = parse_info_file(rval, "charge_now", "charge_now");
-	rval = parse_info_file(rval, "energy_now", "charge_now");
-	rval = parse_info_file(rval, "charge_full", "charge_full");
-	rval = parse_info_file(rval, "energy_full", "charge_full");
-	rval = parse_info_file(rval, "charge_full_design", "charge_full_design");
-	rval = parse_info_file(rval, "energy_full_design", "charge_full_design");
-	rval = parse_info_file(rval, "online", "online");
-	rval = parse_info_file(rval, "status", "charging state");
-	rval = parse_info_file(rval, "type", "type");
-	rval = parse_info_file(rval, "trip_point_0_type", "sys_trip_type");
-	rval = parse_info_file(rval, "trip_point_0_temp", "sys_trip_temp");
-	rval = parse_info_file(rval, "temp", "sys_temp");
-	rval = parse_info_file(rval, "cur_state", "cur_state");
-	rval = parse_info_file(rval, "max_state", "max_state");
-
-	/* we cannot do chdir("..") here because some dirs are just symlinks */
-	if (chdir(acpi_path) < 0)
-		return NULL;
-	if (chdir(device_type) < 0) 
-		return NULL;
-	return rval;
-}
-
-static struct list *get_proc_info(char *device_name)
-{
-	struct list *rval = NULL;
-
-	if (chdir(device_name) < 0) {
+        if (filename == NULL) {
+                fprintf(stderr, "Out of memory. Could not allocate memory in get_info.\n");
 		return NULL;
 	}
-	rval = parse_info_file(rval, "state", NULL);
-	rval = parse_info_file(rval, "status", NULL);
-	rval = parse_info_file(rval, "info", NULL);
-	rval = parse_info_file(rval, "temperature", NULL);
-	rval = parse_info_file(rval, "cooling_mode", NULL);
-	chdir ("..");
+
+	for (i = 0; i < n; i++) {
+		sprintf(filename, "%s/%s", device_name, list[i].file);
+		rval = parse_info_file(rval, filename, list[i].attr);
+	}
+
 	return rval;
 }
 
@@ -177,23 +184,20 @@ void free_devices(struct list *devices)
 	list_free(devices);
 }
 
-struct list *find_devices(char *acpi_path, char *device_type, int showerr, int proc_interface)
+struct list *find_devices(char *acpi_path, int device_nr, int proc_interface)
 {
 	DIR *d;
 	struct dirent *de;
 	struct list *device_info;
 	struct list *rval = NULL;
+	char *device_type = proc_interface ? device[device_nr].proc : device[device_nr].sys;
 
 	if (chdir(acpi_path) < 0) {
-		if (showerr) {
-			fprintf(stderr, "No ACPI support in kernel, or incorrect acpi_path (\"%s\").\n", acpi_path);
-		}
+		fprintf(stderr, "No ACPI support in kernel, or incorrect acpi_path (\"%s\").\n", acpi_path);
 		exit(1);
 	}
 	if (chdir(device_type) < 0) {
-		if (showerr) {
-			fprintf(stderr, "No support for device type: %s\n", device_type);
-		}
+		fprintf(stderr, "No support for device type: %s\n", device_type);
 		return NULL;
 	}
 	d = opendir(".");
@@ -205,10 +209,7 @@ struct list *find_devices(char *acpi_path, char *device_type, int showerr, int p
 			continue;
 		}
 
-		if (proc_interface)
-			device_info = get_proc_info(de->d_name);
-		else 
-			device_info = get_sys_info(de->d_name, acpi_path, device_type);
+		device_info = get_info(de->d_name, proc_interface);
 
 		if (device_info)
 			rval = list_append(rval, device_info);
@@ -380,7 +381,7 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 			    !strcmp(value->attr, "sys_trip_type")) {
 				state = value->value;
 			} else if (!strcmp(value->attr, "type")) {
-				type_zone = (strstr(value->value, "thermal zone") != NULL);
+				type_zone = (strstr(value->value, "thermal zone") != NULL || strstr(value->value, "acpitz") != NULL);
 			} else if (!strcmp(value->attr, "temperature")) {
 				temperature = get_unit_value(value->value);
 				if (strstr(value->value, "dK")) {
@@ -443,7 +444,7 @@ void print_cooling_information(struct list *cooling, int show_empty_slots)
 				state = value->value;
 			} else if (!strcmp(value->attr, "type")) {
 			        type = value->value;
-				type_cooling = (strstr(type, "thermal zone") == NULL);
+				type_cooling = (strstr(type, "thermal zone") == NULL && strstr(type, "acpitz") == NULL);
 			} else if (!strcmp(value->attr, "cur_state")) {
 			        cur_state = get_unit_value(value->value);
 			} else if (!strcmp(value->attr, "max_state")) {
