@@ -1,3 +1,9 @@
+2008-08-21  Michael Meskes  <meskes@debian.org>
+
+ * fixed wording in manpage with regard to default path for new interface
+ * fixed buffer underrun in parse_field()
+ * do not use unsigned int if values can be negative
+
 2008-06-17  Michael Meskes  <meskes@debian.org>
 
  * release 1.1

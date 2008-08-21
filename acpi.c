@@ -52,13 +52,11 @@ static struct field *parse_field(char *buf, char *given_attr)
 	char *p;
 	char *attr;
 	char *value;
-	int has_attr = 0, len;
+	int has_attr = 0;
 
 	attr = calloc(BUF_SIZE, sizeof(char));
 	value = calloc(BUF_SIZE, sizeof(char));
 	rval = malloc(sizeof(struct field));
-	len = strlen(buf);
-	buf[len - 1] = '\0';
 	if (!rval || !attr || !value) {
 		fprintf(stderr, "Out of memory. Could not allocate memory in parse_field.\n");
 		exit(1);
@@ -82,9 +80,13 @@ static struct field *parse_field(char *buf, char *given_attr)
 			if (*p != ' ') { break; }
 		}
 	} else {
-		strncpy(attr, given_attr, BUF_SIZE);
+		strncpy(attr, given_attr, BUF_SIZE );
 	}
 	strncpy(value, p, BUF_SIZE);
+	if (attr[strlen(attr) - 1] == '\n')
+		attr[strlen(attr) - 1] = '\0';
+	if (value[strlen(value) - 1] == '\n')
+		value[strlen(value) - 1] = '\0';
 	rval->attr = attr;
 	rval->value = value;
 	return rval;
@@ -99,7 +101,7 @@ static struct list *parse_info_file(struct list *l, char *filename, char *given_
 	if (!fd) {
 		return l;
 	}
-	while (fgets(buf, BUF_SIZE, fd)) {
+	while (fgets(buf, BUF_SIZE, fd) != NULL) {
 		struct field *f;
 		f = parse_field(buf, given_attr);
 		if (!f) { continue; }
@@ -148,7 +150,7 @@ static struct list *get_info(char *device_name, int proc_interface)
 	struct list *rval = NULL;
 	struct file_list *list = proc_interface ? proc_list : sys_list;
 	int i, n = (proc_interface ? sizeof(proc_list) : sizeof(sys_list))/sizeof(struct file_list);
-	char *filename = malloc(strlen(device_name) + strlen("/energy_full_design"));
+	char *filename = malloc(strlen(device_name) + strlen("/energy_full_design "));
 
         if (filename == NULL) {
                 fprintf(stderr, "Out of memory. Could not allocate memory in get_info.\n");
@@ -218,7 +220,7 @@ struct list *find_devices(char *acpi_path, int device_nr, int proc_interface)
 	return rval;
 }
 
-static unsigned int get_unit_value(char *value)
+static int get_unit_value(char *value)
 {
 	int n = -1;
 	sscanf(value, "%d", &n);
@@ -236,7 +238,6 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 		int remaining_capacity = -1;
 		int present_rate = -1;
 		int design_capacity = -1;
-		int real_capacity = -1;
 		int hours, minutes, seconds;
 		int percentage;
 		char *state = NULL, *poststr;
@@ -247,18 +248,26 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 			value = fields->data;
 			if (!strcasecmp(value->attr, "remaining capacity")) {
 				remaining_capacity = get_unit_value(value->value);
+				if (!state)
+					state = strdup("avaiable");
 			} else if (!strcmp(value->attr, "charge_now")) {
 				remaining_capacity = get_unit_value(value->value)/1000;
+				if (!state)
+					state = strdup("avaiable");
 			} else if (!strcasecmp(value->attr, "present_rate")) {
 				present_rate = get_unit_value(value->value);
 			} else if (!strcmp(value->attr, "current_now")) {
 				present_rate = abs(get_unit_value(value->value))/1000;
 			} else if (!strcasecmp(value->attr, "last full capacity")) {
 				design_capacity = get_unit_value(value->value);
+				if (!state)
+					state = strdup("avaiable");
 			} else if (!strcmp(value->attr, "charge_full")) {
 				design_capacity = get_unit_value(value->value)/1000;
+				if (!state)
+					state = strdup("avaiable");
 			} else if (!strcmp(value->attr, "charge_full_design")) {
-				real_capacity = get_unit_value(value->value)/1000;
+				design_capacity = get_unit_value(value->value)/1000;
 			} else if (!strcmp(value->attr, "type")) {
 				type_battery = (strcasecmp(value->value, "battery") == 0);
 			} else if (!strcmp(value->attr, "charging state") ||
@@ -268,7 +277,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 			fields = list_next(fields);
 		}
 		if (type_battery) { /* or else this is the ac_adapter */
-			if (remaining_capacity < 0 || design_capacity < 0 || !state) {
+			if (!state) {
 				if (show_empty_slots) {
 					printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
 				}
@@ -387,17 +396,23 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 				if (strstr(value->value, "dK")) {
 					temperature = (temperature / 10) - ABSOLUTE_ZERO;
 				}
+				if (!state)
+					state = strdup("avaiable");
 			} else if (!strcmp(value->attr, "sys_temp")) {
 				temperature = get_unit_value(value->value) / 1000.0;
+				if (!state)
+					state = strdup("avaiable");
 			} else if (!strcmp(value->attr, "sys_trip_temp")) {
 				trip_temp = get_unit_value(value->value) / 1000.0;
+				if (!state)
+					state = strdup("avaiable");
 			}
 			fields = list_next(fields);
 		}
 		if (type_zone) { /* or else this is a cooling device */
 			if (temperature < trip_temp) 
 				state = "ok";
-			if (temperature < 0 || !state) {
+			if (!state) {
 				if (show_empty_slots) {
 					printf("%12s %d: slot empty\n", THERMAL_DESC, sensor_num - 1);
 				}
