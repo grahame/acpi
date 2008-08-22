@@ -295,7 +295,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 					seconds = -1;
 				} else if (!strcasecmp(state, "charging")) {
 					if (present_rate > MIN_PRESENT_RATE) {
-						seconds = 60 * (design_capacity - remaining_capacity) / present_rate;
+						seconds = 3600 * (design_capacity - remaining_capacity) / present_rate;
 						poststr = " until charged";
 					} else {
 						poststr = "charging at zero rate - will never fully charge.";
@@ -303,7 +303,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 					}
 				} else if (!strcasecmp(state, "discharging")) {
 					if (present_rate > MIN_PRESENT_RATE) {
-						seconds = 60 * remaining_capacity / present_rate;
+						seconds = 3600 * remaining_capacity / present_rate;
 						poststr = " remaining";
 					} else {
 						poststr = "discharging at zero rate - will never fully discharge.";
