@@ -249,11 +249,11 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 			if (!strcasecmp(value->attr, "remaining capacity")) {
 				remaining_capacity = get_unit_value(value->value);
 				if (!state)
-					state = strdup("avaiable");
+					state = strdup("available");
 			} else if (!strcmp(value->attr, "charge_now")) {
 				remaining_capacity = get_unit_value(value->value)/1000;
 				if (!state)
-					state = strdup("avaiable");
+					state = strdup("available");
 			} else if (!strcasecmp(value->attr, "present_rate")) {
 				present_rate = get_unit_value(value->value);
 			} else if (!strcmp(value->attr, "current_now")) {
@@ -261,11 +261,11 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 			} else if (!strcasecmp(value->attr, "last full capacity")) {
 				design_capacity = get_unit_value(value->value);
 				if (!state)
-					state = strdup("avaiable");
+					state = strdup("available");
 			} else if (!strcmp(value->attr, "charge_full")) {
 				design_capacity = get_unit_value(value->value)/1000;
 				if (!state)
-					state = strdup("avaiable");
+					state = strdup("available");
 			} else if (!strcmp(value->attr, "charge_full_design")) {
 				design_capacity = get_unit_value(value->value)/1000;
 			} else if (!strcmp(value->attr, "type")) {
@@ -397,15 +397,15 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 					temperature = (temperature / 10) - ABSOLUTE_ZERO;
 				}
 				if (!state)
-					state = strdup("avaiable");
+					state = strdup("available");
 			} else if (!strcmp(value->attr, "sys_temp")) {
 				temperature = get_unit_value(value->value) / 1000.0;
 				if (!state)
-					state = strdup("avaiable");
+					state = strdup("available");
 			} else if (!strcmp(value->attr, "sys_trip_temp")) {
 				trip_temp = get_unit_value(value->value) / 1000.0;
 				if (!state)
-					state = strdup("avaiable");
+					state = strdup("available");
 			}
 			fields = list_next(fields);
 		}
