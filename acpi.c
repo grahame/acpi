@@ -257,7 +257,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 			} else if (!strcasecmp(value->attr, "present_rate")) {
 				present_rate = get_unit_value(value->value);
 			} else if (!strcmp(value->attr, "current_now")) {
-				present_rate = abs(get_unit_value(value->value))/1000;
+				present_rate = get_unit_value(value->value)/1000;
 			} else if (!strcasecmp(value->attr, "last full capacity")) {
 				design_capacity = get_unit_value(value->value);
 				if (!state)
@@ -320,7 +320,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 					minutes = seconds / 60;
 					seconds -= 60 * minutes;
 					printf(", %02d:%02d:%02d%s", hours, minutes, seconds, poststr);
-				} else if ((seconds < 0) && (poststr != NULL)) {
+				} else if (poststr != NULL) {
 					printf(", %s", poststr);
 				}
 				printf("\n");
