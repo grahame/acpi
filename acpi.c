@@ -238,6 +238,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 		int remaining_capacity = -1;
 		int present_rate = -1;
 		int design_capacity = -1;
+		int last_capacity = -1;
 		int hours, minutes, seconds;
 		int percentage;
 		char *state = NULL, *poststr;
@@ -259,11 +260,11 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 			} else if (!strcmp(value->attr, "current_now")) {
 				present_rate = get_unit_value(value->value)/1000;
 			} else if (!strcasecmp(value->attr, "last full capacity")) {
-				design_capacity = get_unit_value(value->value);
+				last_capacity = get_unit_value(value->value);
 				if (!state)
 					state = strdup("available");
 			} else if (!strcmp(value->attr, "charge_full")) {
-				design_capacity = get_unit_value(value->value)/1000;
+				last_capacity = get_unit_value(value->value)/1000;
 				if (!state)
 					state = strdup("available");
 			} else if (!strcmp(value->attr, "charge_full_design")) {
@@ -282,20 +283,21 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 					printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
 				}
 			} else {
-				if (design_capacity < MIN_CAPACITY) {
+				if (last_capacity < MIN_CAPACITY) {
 					percentage = 0;
 				} else {
-					percentage = remaining_capacity * 100 / design_capacity;
+					percentage = remaining_capacity * 100 / last_capacity;
 				}
 				if (percentage > 100)
 					percentage = 100;
 				printf("%12s %d: %s, %d%%", BATTERY_DESC, battery_num - 1, state, percentage);
+
 				if (present_rate == -1) {
-					poststr = "rate information unavailable.";
+					poststr = "rate information unavailable";
 					seconds = -1;
 				} else if (!strcasecmp(state, "charging")) {
 					if (present_rate > MIN_PRESENT_RATE) {
-						seconds = 3600 * (design_capacity - remaining_capacity) / present_rate;
+						seconds = 3600 * (last_capacity - remaining_capacity) / present_rate;
 						poststr = " until charged";
 					} else {
 						poststr = "charging at zero rate - will never fully charge.";
@@ -323,6 +325,11 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 				} else if (poststr != NULL) {
 					printf(", %s", poststr);
 				}
+
+				if (design_capacity > 0) {
+					printf (", design capacity %d mAh", design_capacity);
+				}
+
 				printf("\n");
 			}
 			battery_num++;

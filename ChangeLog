@@ -4,6 +4,7 @@
  * fixed buffer underrun in parse_field()
  * do not use unsigned int if values can be negative
  * fixed calculation of (dis)charging time (seconds/minutes mismatch)
+ * display design capacity
 
 2008-06-17  Michael Meskes  <meskes@debian.org>
 
