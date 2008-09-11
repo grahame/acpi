@@ -1,3 +1,8 @@
+2008-09-11  Michael Meskes  <meskes@debian.org>
+
+ * made capacity information dependant on option
+ * also show last full capacity
+
 2008-08-22  Michael Meskes  <meskes@debian.org>
 
  * fixed wording in manpage with regard to default path for new interface
@@ -8,7 +13,7 @@
 
 2008-06-17  Michael Meskes  <meskes@debian.org>
 
- * release 1.1
+ * released 1.1
  * just another possible type entry
  * some more code cleanup
  * removed support for old /proc file structure, only the last version of

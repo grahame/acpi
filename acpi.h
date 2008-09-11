@@ -60,7 +60,7 @@ struct list *find_devices(char *acpi_path, int device_nr, int proc_interface);
 
 void free_devices(struct list *devices);
 
-void print_battery_information(struct list *batteries, int show_empty_slots);
+void print_battery_information(struct list *batteries, int show_empty_slots, int show_capacity);
 
 void print_ac_adapter_information(struct list *batteries, int show_empty_slots);
 

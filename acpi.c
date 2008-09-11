@@ -227,7 +227,7 @@ static int get_unit_value(char *value)
 	return n;
 }
 
-void print_battery_information(struct list *batteries, int show_empty_slots)
+void print_battery_information(struct list *batteries, int show_empty_slots, int show_capacity)
 {
 	struct list *battery = batteries;
 	struct list *fields;
@@ -326,11 +326,21 @@ void print_battery_information(struct list *batteries, int show_empty_slots)
 					printf(", %s", poststr);
 				}
 
-				if (design_capacity > 0) {
-					printf (", design capacity %d mAh", design_capacity);
+				printf("\n");
+				
+				if (show_capacity && design_capacity > 0) {
+					if (last_capacity <= 100) {
+						/* some broken systems just give a percentage here */
+						percentage = last_capacity;
+						last_capacity = percentage * design_capacity / 100;
+					} else {
+						percentage = last_capacity * 100 / design_capacity;
+					}
+				if (percentage > 100)
+					percentage = 100;
+					printf("%12s %d: design capacity %d mAh, last full capacity %d mAh = %d%%\n", BATTERY_DESC, battery_num - 1, design_capacity, last_capacity, percentage);
 				}
 
-				printf("\n");
 			}
 			battery_num++;
 		}
