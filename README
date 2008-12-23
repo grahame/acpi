@@ -7,7 +7,7 @@ acpiclient.sourceforge.net.
 
 Debian packages of this software are currently available. It should 
 be possible to run "apt-get install acpi" and have a recent version 
-installed.
+installed. The same holds for other distributions of course.
 
 Please send bug reports, requests for features, etc to
 meskes@debian.org. If there is a bug in the output of "acpi", 
