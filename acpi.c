@@ -255,7 +255,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 				remaining_capacity = get_unit_value(value->value)/1000;
 				if (!state)
 					state = strdup("available");
-			} else if (!strcasecmp(value->attr, "present_rate")) {
+			} else if (!strcasecmp(value->attr, "present rate")) {
 				present_rate = get_unit_value(value->value);
 			} else if (!strcmp(value->attr, "current_now")) {
 				present_rate = get_unit_value(value->value)/1000;
