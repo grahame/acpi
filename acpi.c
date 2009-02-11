@@ -123,6 +123,7 @@ static struct file_list	sys_list[] =
 		{ "charge_now", "charge_now"},
 		{ "energy_now", "energy_now"},
 		{ "voltage_now", "voltage_now"},
+		{ "voltage_min_design", "voltage_min_design"},
 		{ "charge_full", "charge_full"},
 		{ "energy_full", "energy_full"},
 		{ "charge_full_design", "charge_full_design"},
@@ -230,89 +231,86 @@ return n;
 
 void print_battery_information(struct list *batteries, int show_empty_slots, int show_capacity)
 {
-struct list *battery = batteries;
-struct list *fields;
-struct field *value;
-int battery_num = 1;
+	struct list *battery = batteries;
+	struct list *fields;
+	struct field *value;
+	int battery_num = 1;
 
-while (battery) {
-	int remaining_capacity = -1;
-	int remaining_energy = -1;
-	int present_rate = -1;
-	int present_energy_rate = -1;
-	int voltage = -1;
-	int design_capacity = -1;
-	int design_energy_capacity = -1;
-	int last_capacity = -1;
-	int last_energy_capacity = -1;
-	int hours, minutes, seconds;
-	int percentage;
-	char *state = NULL, *poststr;
-	int type_battery = TRUE;
+	while (battery) {
+		int remaining_capacity = -1;
+		int remaining_energy = -1;
+		int present_rate = -1;
+		int voltage = -1;
+		int design_capacity = -1;
+		int design_energy_capacity = -1;
+		int last_capacity = -1;
+		int last_energy_capacity = -1;
+		int hours, minutes, seconds;
+		int percentage;
+		char *state = NULL, *poststr;
+		int type_battery = TRUE;
 
-	fields = battery->data;
-	while (fields) {
-		value = fields->data;
-		if (!strcasecmp(value->attr, "remaining capacity")) {
-			remaining_capacity = get_unit_value(value->value);
-			if (!state)
-				state = strdup("available");
-		} else if (!strcmp(value->attr, "charge_now")) {
-			remaining_capacity = get_unit_value(value->value)/1000;
-			if (!state)
-				state = strdup("available");
-		} else if (!strcmp(value->attr, "energy_now")) {
-			remaining_energy = get_unit_value(value->value)/1000;
-			if (!state)
-				state = strdup("available");
-		} else if (!strcasecmp(value->attr, "present rate")) {
-			present_rate = get_unit_value(value->value);
-		} else if (!strcmp(value->attr, "current_now")) {
-			present_rate = get_unit_value(value->value)/1000;
-		} else if (!strcmp(value->attr, "energy_now")) {
-			present_energy_rate = get_unit_value(value->value)/1000;
-		} else if (!strcasecmp(value->attr, "last full capacity")) {
-			last_capacity = get_unit_value(value->value);
-			if (!state)
-				state = strdup("available");
-		} else if (!strcmp(value->attr, "charge_full")) {
-			last_capacity = get_unit_value(value->value)/1000;
-			if (!state)
-				state = strdup("available");
-		} else if (!strcmp(value->attr, "energy_full")) {
-			last_energy_capacity = get_unit_value(value->value)/1000;
-			if (!state)
-				state = strdup("available");
-		} else if (!strcmp(value->attr, "charge_full_design")) {
-			design_capacity = get_unit_value(value->value)/1000;
-		} else if (!strcmp(value->attr, "energy_full_design")) {
-			design_energy_capacity = get_unit_value(value->value)/1000;
-		} else if (!strcmp(value->attr, "type")) {
-			type_battery = (strcasecmp(value->value, "battery") == 0);
-		} else if (!strcmp(value->attr, "charging state") ||
-			   !strcmp(value->attr, "State")) {
-			state = value->value;
-		} else if (!strcmp(value->attr, "voltage_now")) {
-			voltage = get_unit_value(value->value)/1000;
-		}
-		fields = list_next(fields);
-	}
-	if (type_battery) { /* or else this is the ac_adapter */
-		if (!state) {
-			if (show_empty_slots) {
-				printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
+		fields = battery->data;
+		while (fields) {
+			value = fields->data;
+			if (!strcasecmp(value->attr, "remaining capacity")) {
+				remaining_capacity = get_unit_value(value->value);
+				if (!state)
+					state = strdup("available");
+			} else if (!strcmp(value->attr, "charge_now")) {
+				remaining_capacity = get_unit_value(value->value)/1000;
+				if (!state)
+					state = strdup("available");
+			} else if (!strcmp(value->attr, "energy_now")) {
+				remaining_energy = get_unit_value(value->value)/1000;
+				if (!state)
+					state = strdup("available");
+			} else if (!strcasecmp(value->attr, "present rate")) {
+				present_rate = get_unit_value(value->value);
+			} else if (!strcmp(value->attr, "current_now")) {
+				present_rate = get_unit_value(value->value)/1000;
+			} else if (!strcasecmp(value->attr, "last full capacity")) {
+				last_capacity = get_unit_value(value->value);
+				if (!state)
+					state = strdup("available");
+			} else if (!strcmp(value->attr, "charge_full")) {
+				last_capacity = get_unit_value(value->value)/1000;
+				if (!state)
+					state = strdup("available");
+			} else if (!strcmp(value->attr, "energy_full")) {
+				last_energy_capacity = get_unit_value(value->value)/1000;
+				if (!state)
+					state = strdup("available");
+			} else if (!strcmp(value->attr, "charge_full_design")) {
+				design_capacity = get_unit_value(value->value)/1000;
+			} else if (!strcmp(value->attr, "energy_full_design")) {
+				design_energy_capacity = get_unit_value(value->value)/1000;
+			} else if (!strcmp(value->attr, "type")) {
+				type_battery = (strcasecmp(value->value, "battery") == 0);
+			} else if (!strcmp(value->attr, "charging state") ||
+				   !strcmp(value->attr, "State")) {
+				state = value->value;
+			} else if (!strcmp(value->attr, "voltage_now")) {
+				voltage = get_unit_value(value->value)/1000;
 			}
-		} else {
-			if (voltage != -1) {
-				/* convert energy values (in mWh) to charge values (in mAh) if needed */
-				if (last_energy_capacity != -1 && last_capacity == -1)
-					last_capacity = last_energy_capacity/(voltage/1000);
+			fields = list_next(fields);
+		}
+		if (type_battery) { /* or else this is the ac_adapter */
+			if (!state) {
+				if (show_empty_slots) {
+					printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
+				}
+			} else {
+				if (voltage != -1) {
+					/* convert energy values (in mWh) to charge values (in mAh) if needed */
+					if (last_energy_capacity != -1 && last_capacity == -1)
+						last_capacity = last_energy_capacity * 1000 / voltage;
 					if (design_energy_capacity != -1 && design_capacity == -1)
-						design_capacity = design_energy_capacity/(voltage/1000);
-					if (present_energy_rate != -1 && present_rate == -1)
-						present_rate = present_energy_rate/(voltage/1000);
-					if (remaining_energy != -1 && remaining_capacity == -1)
-						remaining_capacity = remaining_energy/(voltage/1000);
+						design_capacity = design_energy_capacity * 1000 / voltage;
+					if (remaining_energy != -1 && remaining_capacity == -1) {
+						remaining_capacity = remaining_energy * 1000 / voltage);
+						present_rate = present_rate * 1000 / voltage;
+					}
 				}
 
 				if (last_capacity < MIN_CAPACITY) {
@@ -372,7 +370,6 @@ while (battery) {
 					percentage = 100;
 					printf("%12s %d: design capacity %d mAh, last full capacity %d mAh = %d%%\n", BATTERY_DESC, battery_num - 1, design_capacity, last_capacity, percentage);
 				}
-
 			}
 			battery_num++;
 		}
