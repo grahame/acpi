@@ -1,3 +1,8 @@
+2009-03-19  Michael Meskes  <meskes@debian.org>
+
+ * Fixed battery output to cope with systems giving energy values but no
+   voltage value.
+
 2009-02-11  Michael Meskes  <meskes@debian.org>
 
  * charge and energy values are not equivalent, correctly convert them

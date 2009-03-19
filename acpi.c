@@ -242,13 +242,14 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 	int present_rate = -1;
 	int voltage = -1;
 	int design_capacity = -1;
-	int design_energy_capacity = -1;
+	int design_capacity_unit = -1;
 	int last_capacity = -1;
-	int last_energy_capacity = -1;
+	int last_capacity_unit = -1;
 	int hours, minutes, seconds;
 	int percentage;
 	char *state = NULL, *poststr;
 	int type_battery = TRUE;
+	char capacity_unit[4] = "mAh";
 
 	fields = battery->data;
 	while (fields) {
@@ -278,13 +279,13 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 		if (!state)
 		    state = strdup("available");
 	    } else if (!strcmp(value->attr, "energy_full")) {
-		last_energy_capacity = get_unit_value(value->value) / 1000;
+		last_capacity_unit = get_unit_value(value->value) / 1000;
 		if (!state)
 		    state = strdup("available");
 	    } else if (!strcmp(value->attr, "charge_full_design")) {
 		design_capacity = get_unit_value(value->value) / 1000;
 	    } else if (!strcmp(value->attr, "energy_full_design")) {
-		design_energy_capacity =
+		design_capacity_unit =
 		    get_unit_value(value->value) / 1000;
 	    } else if (!strcmp(value->attr, "type")) {
 		type_battery = (strcasecmp(value->value, "battery") == 0);
@@ -300,18 +301,31 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 		if (show_empty_slots) 
 		    printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
 	    } else {
-		if (voltage != -1) {
-		    /* convert energy values (in mWh) to charge values (in mAh) if needed */
-		    if (last_energy_capacity != -1 && last_capacity == -1)
-			last_capacity = last_energy_capacity * 1000 / voltage;
-		    if (design_energy_capacity != -1 && design_capacity == -1)
-			design_capacity = design_energy_capacity * 1000 / voltage;
-		    if (remaining_energy != -1 && remaining_capacity == -1) {
-			remaining_capacity = remaining_energy * 1000 / voltage;
-			present_rate = present_rate * 1000 / voltage;
+		/* convert energy values (in mWh) to charge values (in mAh) if needed and possible */
+		if (last_capacity_unit != -1 && last_capacity == -1) {
+		    if (voltage != -1) {
+			last_capacity = last_capacity_unit * 1000 / voltage;
+		    } else {
+			last_capacity = last_capacity_unit;
+			strcpy(capacity_unit, "mWh");
 		    }
 		}
-
+		if (design_capacity_unit != -1 && design_capacity == -1) {
+		    if (voltage != -1) {
+			design_capacity = design_capacity_unit * 1000 / voltage;
+		    } else {
+			design_capacity = design_capacity_unit;
+			strcpy(capacity_unit, "mWh");
+		    }
+		}
+		if (remaining_energy != -1 && remaining_capacity == -1) {
+		    if (voltage != -1) {
+			remaining_capacity = remaining_energy * 1000 / voltage;
+			present_rate = present_rate * 1000 / voltage;
+		    } else {
+			remaining_capacity = remaining_energy;
+		    }
+		}
 		if (last_capacity < MIN_CAPACITY)
 		    percentage = 0;
 		else
@@ -369,8 +383,8 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 		    if (percentage > 100)
 			percentage = 100;
 
-		    printf ("%12s %d: design capacity %d mAh, last full capacity %d mAh = %d%%\n",
-			 BATTERY_DESC, battery_num - 1, design_capacity, last_capacity, percentage);
+		    printf ("%12s %d: design capacity %d %s, last full capacity %d %s = %d%%\n",
+			 BATTERY_DESC, battery_num - 1, design_capacity, capacity_unit, last_capacity, capacity_unit, percentage);
 		}
 	    }
 	    battery_num++;
