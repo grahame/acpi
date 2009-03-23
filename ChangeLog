@@ -3,6 +3,7 @@
  * Fixed battery output to cope with systems giving energy values but no
    voltage value.
  * Add output of all trip points.
+ * Simplified old crufty user interface by removing all suppress options.
 
 2009-02-11  Michael Meskes  <meskes@debian.org>
 

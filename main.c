@@ -86,19 +86,14 @@ static int usage(char *argv[])
 "thermal information.\n"
 "\n"
 "  -b, --battery		battery information\n"
-"  -B, --without-battery	suppress battery information\n"
 "  -i, --details		show additional details if available:\n"
 "				- battery capacity information\n"
 "				- temperature trip points\n"
 "  -a, --ac-adapter		ac adapter information\n"
-"  -A, --without-ac-adapter	suppress ac-adapter information\n"
 "  -t, --thermal		thermal information\n"
-"  -T, --without-thermal	suppress thermal information\n"
 "  -c, --cooling		cooling information\n"
-"  -C, --without-cooling	suppress cooling information\n"
 "  -V, --everything		show every device, overrides above options\n"
 "  -s, --show-empty		show non-operational devices\n"
-"  -S, --hide-empty		hide non-operational devices\n"
 "  -f, --fahrenheit		use fahrenheit as the temperature unit\n"
 "  -k, --kelvin			use kelvin as the temperature unit\n"
 "  -d, --directory <dir>	path to ACPI info (/sys/class resp. /proc/acpi)\n"
@@ -120,13 +115,9 @@ static struct option long_options[] = {
 	{ "version", 0, 0, 'v' }, 
 	{ "verbose", 0, 0, 'V' }, 
 	{ "battery", 0, 0, 'b' }, 
-	{ "without-battery", 0, 0, 'B' }, 
 	{ "ac-adapter", 0, 0, 'a' }, 
-	{ "without-ac-adapter", 0, 0, 'A' }, 
 	{ "thermal", 0, 0, 't' }, 
-	{ "without-thermal", 0, 0, 'T' }, 
 	{ "cooling", 0, 0, 'c' }, 
-	{ "without-cooling", 0, 0, 'C' }, 
 	{ "show-empty", 0, 0, 's' }, 
 	{ "hide-empty", 0, 0, 'S' }, 
 	{ "fahrenheit", 0, 0, 'f' }, 
@@ -156,7 +147,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	while ((ch = getopt_long(argc, argv, "ipVbBtTaAsShvfkcCd:", long_options, &option_index)) != -1) {
+	while ((ch = getopt_long(argc, argv, "ipVbtashvfkcd:", long_options, &option_index)) != -1) {
 		switch (ch) {
 			case 'V':
 				show_batteries = show_ac_adapter = show_thermal = show_cooling = show_details = TRUE;
@@ -164,32 +155,17 @@ int main(int argc, char *argv[])
 			case 'b':
 				show_batteries = TRUE;
 				break;
-			case 'B':
-				show_batteries = FALSE;
-				break;
 			case 'a':
 				show_ac_adapter = TRUE;
-				break;
-			case 'A':
-				show_ac_adapter = FALSE;
 				break;
 			case 't':
 				show_thermal = TRUE;
 				break;
-			case 'T':
-				show_thermal = FALSE;
-				break;
 			case 'c':
 				show_cooling = TRUE;
 				break;
-			case 'C':
-				show_cooling = FALSE;
-				break;
 			case 's':
 				show_empty_slots = TRUE;
-				break;
-			case 'S':
-				show_empty_slots = FALSE;
 				break;
 			case 'i':
 				show_details = TRUE;
