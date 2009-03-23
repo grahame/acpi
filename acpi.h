@@ -64,7 +64,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 
 void print_ac_adapter_information(struct list *batteries, int show_empty_slots);
 
-void print_thermal_information(struct list *batteries, int show_empty_slots, int temp_units);
+void print_thermal_information(struct list *batteries, int show_empty_slots, int temp_units, int show_trip_points);
 
 void print_cooling_information(struct list *batteries, int show_empty_slots);
 

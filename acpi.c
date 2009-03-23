@@ -33,7 +33,7 @@
 #define DEVICE_LEN	20
 #define TRIP_POINTS	5
 #define BATTERY_DESC	"Battery"
-#define AC_ADAPTER_DESC "AC Adapter"
+#define AC_ADAPTER_DESC "Adapter"
 #define THERMAL_DESC	"Thermal"
 #define COOLING_DESC	"Cooling"
 
@@ -309,7 +309,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 	if (type_battery) {	/* or else this is the ac_adapter */
 	    if (!state) {
 		if (show_empty_slots) 
-		    printf("%12s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
+		    printf("%s %d: slot empty\n", BATTERY_DESC, battery_num - 1);
 	    } else {
 		/* convert energy values (in mWh) to charge values (in mAh) if needed and possible */
 		if (last_capacity_unit != -1 && last_capacity == -1) {
@@ -344,7 +344,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 		if (percentage > 100)
 		    percentage = 100;
 
-		printf("%12s %d: %s, %d%%", BATTERY_DESC, battery_num - 1, state, percentage);
+		printf("%s %d: %s, %d%%", BATTERY_DESC, battery_num - 1, state, percentage);
 
 		if (present_rate == -1) {
 		    poststr = "rate information unavailable";
@@ -393,7 +393,7 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 		    if (percentage > 100)
 			percentage = 100;
 
-		    printf ("%12s %d: design capacity %d %s, last full capacity %d %s = %d%%\n",
+		    printf ("%s %d: design capacity %d %s, last full capacity %d %s = %d%%\n",
 			 BATTERY_DESC, battery_num - 1, design_capacity, capacity_unit, last_capacity, capacity_unit, percentage);
 		}
 	    }
@@ -429,9 +429,9 @@ void print_ac_adapter_information(struct list *ac_adapters, int show_empty_slots
 	if (type_ac) {		/* or else this is a battery */
 	    if (!state) {
 		if (show_empty_slots) 
-		    printf("%12s %d: slot empty\n", AC_ADAPTER_DESC, adapter_num - 1);
+		    printf("%s %d: slot empty\n", AC_ADAPTER_DESC, adapter_num - 1);
 	    } else  {
-		printf("%12s %d: %s\n", AC_ADAPTER_DESC, adapter_num - 1, state);
+		printf("%s %d: %s\n", AC_ADAPTER_DESC, adapter_num - 1, state);
 	    }
 
 	    adapter_num++;
@@ -440,7 +440,28 @@ void print_ac_adapter_information(struct list *ac_adapters, int show_empty_slots
     }
 }
 
-void print_thermal_information(struct list *thermal, int show_empty_slots, int temp_units)
+static double get_real_temp(float temperature, char **scale, int temp_units)
+{
+	double real_temp = (double) temperature;
+
+	switch (temp_units) {
+	case TEMP_CELSIUS:
+	    *scale = "degrees C";
+	    break;
+	case TEMP_FAHRENHEIT:
+	    real_temp = (real_temp * 1.8) + 32;
+	    *scale = "degrees F";
+	    break;
+	case TEMP_KELVIN:
+	default:
+	    real_temp += ABSOLUTE_ZERO;
+	    *scale = "kelvin";
+	    break;
+	}
+	return (real_temp);
+}
+
+void print_thermal_information(struct list *thermal, int show_empty_slots, int temp_units, int show_trip_points)
 {
     struct list *sensor = thermal;
     struct list *fields;
@@ -457,7 +478,7 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 	char str[]="trip_point_123_type";
 	char *state = NULL, *scale;
 	double real_temp;
-	int trip_points = -1;
+	int i, trip_points = -1;
 
 	memset(trip, sizeof trip, 0);
 	fields = sensor->data;
@@ -480,8 +501,6 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 		if (!state)
 		    state = strdup("ok");
 	    } else {
-		int i;
-
 		for (i = 0; i < TRIP_POINTS; i++)
 		{
 			sprintf(str, "trip_point_%d_temp", i);
@@ -499,8 +518,6 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 	    fields = list_next(fields);
 	}
 	if (type_zone) {	/* or else this is a cooling device */
-	    int i;
-
 	    for (i = 0; i <= trip_points; i++)
 	    {
 		if (temperature >= trip[i].trip_temp && trip[i].trip_temp >= MIN_TEMP) {
@@ -510,24 +527,20 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 	    }
 	    if (!state) {
 		if (show_empty_slots) 
-		    printf("%12s %d: slot empty\n", THERMAL_DESC, sensor_num - 1);
+		    printf("%s %d: slot empty\n", THERMAL_DESC, sensor_num - 1);
 	    } else {
-		real_temp = (double) temperature;
-		switch (temp_units) {
-		case TEMP_CELSIUS:
-		    scale = "degrees C";
-		    break;
-		case TEMP_FAHRENHEIT:
-		    real_temp = (real_temp * 1.8) + 32;
-		    scale = "degrees F";
-		    break;
-		case TEMP_KELVIN:
-		default:
-		    real_temp += ABSOLUTE_ZERO;
-		    scale = "kelvin";
-		    break;
+		real_temp = get_real_temp(temperature, &scale, temp_units);
+		printf("%s %d: %s, %.1f %s\n", THERMAL_DESC, sensor_num - 1, state, real_temp, scale);
+		if (show_trip_points) {
+		    for (i = 0; i <= trip_points; i++)
+		    {
+			if (trip[i].trip_temp >= MIN_TEMP) {
+				real_temp = get_real_temp(trip[i].trip_temp, &scale, temp_units);
+				printf("%s %d: trip point %d switches to mode %s at temperature %.1f %s\n",
+				THERMAL_DESC, sensor_num - 1, i, trip[i].trip_type, real_temp, scale);
+			}
+		    }
 		}
-		printf("%12s %d: %s, %.1f %s\n", THERMAL_DESC, sensor_num - 1, state, real_temp, scale);
 	    }
 	    sensor_num++;
 	}
@@ -565,13 +578,13 @@ void print_cooling_information(struct list *cooling, int show_empty_slots)
 	if (type_cooling) {	/* or else this is a thermal zone */
 	    if (!state && !type) {
 		if (show_empty_slots)
-		    printf("%12s %d: slot empty\n", COOLING_DESC, sensor_num - 1);
+		    printf("%s %d: slot empty\n", COOLING_DESC, sensor_num - 1);
 	    } else if (state) {
-		printf("%12s %d: %s\n", COOLING_DESC, sensor_num - 1, state);
+		printf("%s %d: %s\n", COOLING_DESC, sensor_num - 1, state);
 	    } else if (cur_state < 0 || max_state < 0) {
-		printf("%12s %d: %s no state information available\n", COOLING_DESC, sensor_num - 1, type);
+		printf("%s %d: %s no state information available\n", COOLING_DESC, sensor_num - 1, type);
 	    } else {
-		printf("%12s %d: %s %d of %d\n", COOLING_DESC, sensor_num - 1, type, cur_state, max_state);
+		printf("%s %d: %s %d of %d\n", COOLING_DESC, sensor_num - 1, type, cur_state, max_state);
 	    }
 
 	    sensor_num++;

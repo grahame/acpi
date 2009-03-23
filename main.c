@@ -32,12 +32,12 @@ struct device device[4] = {
 			{ COOLING_DEV, "fan", "thermal", "cooling_device" }
 			  };
 
-static void do_show_batteries(char *acpi_path, int show_empty_slots, int show_capacity, int proc_interface)
+static void do_show_batteries(char *acpi_path, int show_empty_slots, int show_details, int proc_interface)
 {
 	struct list *batteries;
 
 	batteries = find_devices(acpi_path, BATTERY, proc_interface);
-	print_battery_information(batteries, show_empty_slots, show_capacity);
+	print_battery_information(batteries, show_empty_slots, show_details);
 	free_devices(batteries);
 }
 
@@ -50,11 +50,11 @@ static void do_show_ac_adapter(char *acpi_path, int show_empty_slots, int proc_i
 	free_devices(ac_adapter);
 }
 
-static void do_show_thermal(char *acpi_path, int show_empty_slots, int temperature_units, int proc_interface) {
+static void do_show_thermal(char *acpi_path, int show_empty_slots, int temperature_units, int show_details, int proc_interface) {
 	struct list *thermal;
 
 	thermal = find_devices(acpi_path, THERMAL_ZONE, proc_interface);
-	print_thermal_information(thermal, show_empty_slots, temperature_units);
+	print_thermal_information(thermal, show_empty_slots, temperature_units, show_details);
 	free_devices(thermal);
 }
 
@@ -85,24 +85,26 @@ static int usage(char *argv[])
 "Shows information from the /proc filesystem, such as battery status or\n"
 "thermal information.\n"
 "\n"
-"  -b, --battery			battery information\n"
-"  -B, --without-battery		suppress battery information\n"
-"  -i, --capacity		show battery capacity information if available\n"
+"  -b, --battery		battery information\n"
+"  -B, --without-battery	suppress battery information\n"
+"  -i, --details		show additional details if available:\n"
+"				- battery capacity information\n"
+"				- temperature trip points\n"
 "  -a, --ac-adapter		ac adapter information\n"
 "  -A, --without-ac-adapter	suppress ac-adapter information\n"
-"  -t, --thermal			thermal information\n"
-"  -T, --without-thermal		suppress thermal information\n"
-"  -c, --cooling			cooling information\n"
-"  -C, --without-cooling		suppress cooling information\n"
+"  -t, --thermal		thermal information\n"
+"  -T, --without-thermal	suppress thermal information\n"
+"  -c, --cooling		cooling information\n"
+"  -C, --without-cooling	suppress cooling information\n"
 "  -V, --everything		show every device, overrides above options\n"
 "  -s, --show-empty		show non-operational devices\n"
 "  -S, --hide-empty		hide non-operational devices\n"
 "  -f, --fahrenheit		use fahrenheit as the temperature unit\n"
 "  -k, --kelvin			use kelvin as the temperature unit\n"
-"  -d, --directory <dir>		path to ACPI info (/sys/class resp. /proc/acpi)\n"
+"  -d, --directory <dir>	path to ACPI info (/sys/class resp. /proc/acpi)\n"
 "  -p, --proc			use old proc interface instead of new sys interface\n"
 "  -h, --help			display this help and exit\n"
-"  -v, --version			output version information and exit\n"
+"  -v, --version		output version information and exit\n"
 "\n"
 "By default, acpi displays information on installed system batteries.\n"
 "Non-operational devices, for example empty battery slots are hidden.\n"
@@ -132,7 +134,7 @@ static struct option long_options[] = {
 	{ "directory", 1, 0, 'd' },
 	{ "everything", 0, 0, 'V' }, 
 	{ "proc", 0, 0, 'p' }, 
-	{ "capacity", 0, 0, 'i' }, 
+	{ "details", 0, 0, 'i' }, 
 	{ 0, 0, 0, 0 }, 
 };
 
@@ -143,7 +145,7 @@ int main(int argc, char *argv[])
 	int show_thermal = FALSE;
 	int show_cooling = FALSE;
 	int show_empty_slots = FALSE;
-	int show_capacity = FALSE;
+	int show_details = FALSE;
 	int proc_interface = FALSE;
 	int temperature_units = TEMP_CELSIUS;
 	int ch, option_index;
@@ -157,7 +159,7 @@ int main(int argc, char *argv[])
 	while ((ch = getopt_long(argc, argv, "ipVbBtTaAsShvfkcCd:", long_options, &option_index)) != -1) {
 		switch (ch) {
 			case 'V':
-				show_batteries = show_ac_adapter = show_thermal = show_cooling = show_capacity = TRUE;
+				show_batteries = show_ac_adapter = show_thermal = show_cooling = show_details = TRUE;
 				break;
 			case 'b':
 				show_batteries = TRUE;
@@ -190,7 +192,7 @@ int main(int argc, char *argv[])
 				show_empty_slots = FALSE;
 				break;
 			case 'i':
-				show_capacity = TRUE;
+				show_details = TRUE;
 				break;
 			case 'v':
 				return version();
@@ -225,13 +227,13 @@ int main(int argc, char *argv[])
 	}
 
 	if (show_batteries) {
-		do_show_batteries(acpi_path, show_empty_slots, show_capacity, proc_interface);
+		do_show_batteries(acpi_path, show_empty_slots, show_details, proc_interface);
 	}
 	if (show_ac_adapter) {
 		do_show_ac_adapter(acpi_path, show_empty_slots, proc_interface);
 	}
 	if (show_thermal) {
-		do_show_thermal(acpi_path, show_empty_slots, temperature_units, proc_interface);
+		do_show_thermal(acpi_path, show_empty_slots, temperature_units, show_details, proc_interface);
 	}
 	if (show_cooling) {
 		do_show_cooling(acpi_path, show_empty_slots, proc_interface);
