@@ -131,7 +131,7 @@ static struct option long_options[] = {
 
 int main(int argc, char *argv[])
 {
-	int show_batteries = TRUE;
+	int show_batteries = FALSE;
 	int show_ac_adapter = FALSE;
 	int show_thermal = FALSE;
 	int show_cooling = FALSE;
@@ -201,6 +201,10 @@ int main(int argc, char *argv[])
 				return usage(argv);
 		}
 	}
+
+	/* if nothing was chosen, we show the battery information */
+	if (!show_batteries && !show_ac_adapter && !show_thermal && !show_cooling)
+		show_batteries = TRUE;
 
 	if (show_batteries) {
 		do_show_batteries(acpi_path, show_empty_slots, show_details, proc_interface);
