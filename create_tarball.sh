@@ -15,5 +15,5 @@ cp -a . ../acpi-$major.$minor
 cd ../acpi-$major.$minor
 autoreconf -i
 cd ..
-tar --exclude CVS --exclude autom4te.cache -zcf acpi-$major.$minor.tar.gz acpi-$major.$minor && rm -r acpi-$major.$minor
+tar --exclude CVS --exclude .git --exclude autom4te.cache -zcf acpi-$major.$minor.tar.gz acpi-$major.$minor && rm -fr acpi-$major.$minor
 
