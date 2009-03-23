@@ -31,6 +31,7 @@
 #include "acpi.h"
 
 #define DEVICE_LEN	20
+#define TRIP_POINTS	5
 #define BATTERY_DESC	"Battery"
 #define AC_ADAPTER_DESC "AC Adapter"
 #define THERMAL_DESC	"Thermal"
@@ -38,6 +39,7 @@
 
 #define MIN_PRESENT_RATE 0.01
 #define MIN_CAPACITY	 0.01
+#define MIN_TEMP	 0.01
 
 static int ignore_directory_entry(struct dirent *de)
 {
@@ -132,9 +134,17 @@ static struct file_list sys_list[] = {
     {"online", "online"},
     {"status", "charging state"},
     {"type", "type"},
-    {"trip_point_0_type", "sys_trip_type"},
-    {"trip_point_0_temp", "sys_trip_temp"},
     {"temp", "sys_temp"},
+    {"trip_point_0_type", "trip_point_0_type"},
+    {"trip_point_0_temp", "trip_point_0_temp"},
+    {"trip_point_1_type", "trip_point_1_type"},
+    {"trip_point_1_temp", "trip_point_1_temp"},
+    {"trip_point_2_type", "trip_point_2_type"},
+    {"trip_point_2_temp", "trip_point_2_temp"},
+    {"trip_point_3_type", "trip_point_3_type"},
+    {"trip_point_3_temp", "trip_point_3_temp"},
+    {"trip_point_4_type", "trip_point_4_type"},
+    {"trip_point_4_temp", "trip_point_4_temp"},
     {"cur_state", "cur_state"},
     {"max_state", "max_state"}
 };
@@ -439,37 +449,65 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
     int type_zone = TRUE;
 
     while (sensor) {
-	float temperature = -1, trip_temp = -1;
+	float temperature = -1;
+	struct {
+			float trip_temp;
+			char *trip_type;
+	} trip[TRIP_POINTS];
+	char str[]="trip_point_123_type";
 	char *state = NULL, *scale;
 	double real_temp;
+	int trip_points = -1;
 
+	memset(trip, sizeof trip, 0);
 	fields = sensor->data;
 	while (fields) {
 	    value = fields->data;
-	    if (!strcmp(value->attr, "state") || !strcmp(value->attr, "sys_trip_type")) {
+	    if (!strcmp(value->attr, "state")) {
 		state = value->value;
 	    } else if (!strcmp(value->attr, "type")) {
 		type_zone = (strstr(value->value, "thermal zone") != NULL || strstr(value->value, "acpitz") != NULL);
+		if (!state)
+		    state = strdup("ok");
 	    } else if (!strcmp(value->attr, "temperature")) {
 		temperature = get_unit_value(value->value);
 		if (strstr(value->value, "dK"))
 		    temperature = (temperature / 10) - ABSOLUTE_ZERO;
 		if (!state)
-		    state = strdup("available");
+		    state = strdup("ok");
 	    } else if (!strcmp(value->attr, "sys_temp")) {
 		temperature = get_unit_value(value->value) / 1000.0;
 		if (!state)
-		    state = strdup("available");
-	    } else if (!strcmp(value->attr, "sys_trip_temp")) {
-		trip_temp = get_unit_value(value->value) / 1000.0;
-		if (!state)
-		    state = strdup("available");
+		    state = strdup("ok");
+	    } else {
+		int i;
+
+		for (i = 0; i < TRIP_POINTS; i++)
+		{
+			sprintf(str, "trip_point_%d_temp", i);
+			if (!strcmp(value->attr, str)) {
+				trip[i].trip_temp = get_unit_value(value->value) / 1000.0;
+			}
+			sprintf(str, "trip_point_%d_type", i);
+			if (!strcmp(value->attr, str)) {
+				trip[i].trip_type = value->value;
+				if (i > trip_points)
+					trip_points = i;
+			}
+		}
 	    }
 	    fields = list_next(fields);
 	}
 	if (type_zone) {	/* or else this is a cooling device */
-	    if (temperature < trip_temp)
-		state = "ok";
+	    int i;
+
+	    for (i = 0; i <= trip_points; i++)
+	    {
+		if (temperature >= trip[i].trip_temp && trip[i].trip_temp >= MIN_TEMP) {
+			state = trip[i].trip_type;
+			break;
+		}
+	    }
 	    if (!state) {
 		if (show_empty_slots) 
 		    printf("%12s %d: slot empty\n", THERMAL_DESC, sensor_num - 1);

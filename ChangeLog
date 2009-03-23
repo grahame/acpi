@@ -1,3 +1,7 @@
+2009-03-23  Michael Meskes  <meskes@debian.org>
+
+ * Fixed thermal zone output to gice complete values.
+
 2009-03-19  Michael Meskes  <meskes@debian.org>
 
  * Fixed battery output to cope with systems giving energy values but no
