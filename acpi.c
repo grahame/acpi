@@ -303,6 +303,8 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 		state = value->value;
 	    } else if (!strcmp(value->attr, "voltage_now")) {
 		voltage = get_unit_value(value->value) / 1000;
+		if (!voltage) /* zero voltage makes all calculations mood */
+			voltage = -1;
 	    }
 	    fields = list_next(fields);
 	}
