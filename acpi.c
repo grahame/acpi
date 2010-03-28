@@ -123,6 +123,7 @@ struct file_list {
 
 static struct file_list sys_list[] = {
     {"current_now", "current_now"},
+    {"power_now", "power_now"},
     {"charge_now", "charge_now"},
     {"energy_now", "energy_now"},
     {"voltage_now", "voltage_now"},
@@ -206,29 +207,36 @@ struct list *find_devices(char *acpi_path, int device_nr,
     struct list *device_info;
     struct list *rval = NULL;
     char *device_type = proc_interface ? device[device_nr].proc : device[device_nr].sys;
+    int found_data = FALSE;
 
     if (chdir(acpi_path) < 0) {
 	fprintf(stderr, "No ACPI support in kernel, or incorrect acpi_path (\"%s\").\n", acpi_path);
 	exit(1);
     }
-    if (chdir(device_type) < 0) {
+
+    if (chdir(device_type) == 0) {
+	d = opendir(".");
+	if (!d) 
+	return NULL;
+
+	while ((de = readdir(d))) {
+	    if (ignore_directory_entry(de))
+		continue;
+
+	    found_data = TRUE;
+	    device_info = get_info(de->d_name, proc_interface);
+
+	    if (device_info)
+		rval = list_append(rval, device_info);
+	}
+	closedir(d);
+    }
+
+    if (!found_data) {
 	fprintf(stderr, "No support for device type: %s\n", device_type);
 	return NULL;
     }
-    d = opendir(".");
-    if (!d) 
-	return NULL;
 
-    while ((de = readdir(d))) {
-	if (ignore_directory_entry(de))
-	    continue;
-
-	device_info = get_info(de->d_name, proc_interface);
-
-	if (device_info)
-	    rval = list_append(rval, device_info);
-    }
-    closedir(d);
     return rval;
 }
 
@@ -279,6 +287,8 @@ void print_battery_information(struct list *batteries, int show_empty_slots, int
 	    } else if (!strcasecmp(value->attr, "present rate")) {
 		present_rate = get_unit_value(value->value);
 	    } else if (!strcmp(value->attr, "current_now")) {
+		present_rate = get_unit_value(value->value) / 1000;
+	    } else if (!strcmp(value->attr, "power_now")) {
 		present_rate = get_unit_value(value->value) / 1000;
 	    } else if (!strcasecmp(value->attr, "last full capacity")) {
 		last_capacity = get_unit_value(value->value);
