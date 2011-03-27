@@ -1,3 +1,7 @@
+2011-03-09  Luca Capello  <luca@pca.it>
+
+ * main.c: use spaces to align -h output
+
 2010-03-28  Michael Meskes  <meskes@debian.org>
 
  * Print error message if no information can be retrieved e.g. because acpi is
