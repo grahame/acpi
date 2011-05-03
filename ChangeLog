@@ -8,6 +8,7 @@
    not activated.
  * Read power_now and use it to replace current_now if the battery is reporting
    energy values.
+ * released 1.5
 
 2009-06-04  Michael Meskes  <meskes@debian.org>
 
