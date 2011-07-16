@@ -492,7 +492,7 @@ void print_thermal_information(struct list *thermal, int show_empty_slots, int t
 	double real_temp;
 	int i, trip_points = -1;
 
-	memset(trip, sizeof trip, 0);
+	memset(trip, 0, sizeof trip);
 	fields = sensor->data;
 	while (fields) {
 	    value = fields->data;
