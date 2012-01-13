@@ -429,7 +429,7 @@ void print_ac_adapter_information(struct list *ac_adapters, int show_empty_slots
 	 fields = adapter->data;
 	while (fields) {
 	    value = fields->data;
-	    if (!strcmp(value->attr, "state") || !strcmp(value->attr, "Status"))
+	    if (!strcmp(value->attr, "state") || !strcmp(value->attr, "status"))
 		state = value->value;
 	    else if (!strcmp(value->attr, "online"))
 		state = get_unit_value(value->value) ? "on-line" : "off-line";
