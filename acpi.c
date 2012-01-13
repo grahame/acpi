@@ -1,7 +1,7 @@
 /* provides a simple client program that reads ACPI status from the /proc filesystem
  *
  * Copyright (C) 2001  Grahame Bowland <grahame@angrygoats.net>
- *	    (C) 2008-2009  Michael Meskes  <meskes@debian.org>
+ *	    (C) 2008-2012  Michael Meskes  <meskes@debian.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

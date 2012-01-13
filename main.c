@@ -2,7 +2,7 @@
  * filesystem
  *
  * Copyright (C) 2001  Grahame Bowland <grahame@angrygoats.net>
- * Copyright (C) 2008  Michael Meskes <meskes@debian.org>
+ * Copyright (C) 2008-2012  Michael Meskes <meskes@debian.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@ static int version(void)
 	printf(ACPI_VERSION_STRING "\n"
 "\n"
 "Copyright (C) 2001 Grahame Bowland.\n"
-"              2008 Michael Meskes.\n"
+"              2008-2012 Michael Meskes.\n"
 "This is free software; see the source for copying conditions.  There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 );
