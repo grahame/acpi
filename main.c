@@ -119,7 +119,6 @@ static struct option long_options[] = {
 	{ "thermal", 0, 0, 't' }, 
 	{ "cooling", 0, 0, 'c' }, 
 	{ "show-empty", 0, 0, 's' }, 
-	{ "hide-empty", 0, 0, 'S' }, 
 	{ "fahrenheit", 0, 0, 'f' }, 
 	{ "kelvin", 0, 0, 'k' }, 
 	{ "directory", 1, 0, 'd' },
