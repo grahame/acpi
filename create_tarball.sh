@@ -2,7 +2,7 @@
 
 # start this script inside the acpi source tree to create a releasable tarball
 
-version=`grep AM_INIT_AUTOMAKE configure.ac |sed -e 's/AM_INIT_AUTOMAKE(acpi, //' -e 's/)//'`
+version=`grep AC_INIT configure.ac |sed -e 's/AC_INIT(\[acpi\], \[//' -e 's/\])//'`
 major=`echo $version |cut -f1 -d"."`
 minor=`echo $version |cut -f2 -d"."`
 if [ -d ../acpi-$major.$minor ]
