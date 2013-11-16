@@ -14,5 +14,8 @@ meskes@debian.org. If there is a bug in the output of "acpi",
 please include a tar file of /proc/acpi or /sys/class depending on the
 interface you used. This will allow me to test the behaviour of the program.
 
+The Changelog file that was available in older versions has been removed.
+Please use the git log instead to see which changes occured between version.
+
 Michael Meskes
 meskes@debian.org
